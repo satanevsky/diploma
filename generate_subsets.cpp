@@ -1,10 +1,5 @@
 #include <vector>
 #include <fstream>
-#include <map>
-#include <iostream>
-#include <algorithm>
-#include <set>
-#include <assert.h>
 #include <bitset>
 #include <string>
 #include <sparsehash/sparse_hash_set>
