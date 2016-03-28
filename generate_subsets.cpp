@@ -145,6 +145,14 @@ public:
             sets.push_back(to_bitset(set_index_list));
         }
     }
+
+    size_t get_sets_count() const {
+        return sets.size();
+    }
+
+    index_list get_set(size_t index) const {
+        return to_index_list(sets[index]);
+    }
 };
 
 
