@@ -3,126 +3,162 @@
 #include <map>
 #include <iostream>
 #include <algorithm>
-using namespace std;
+#include <set>
+#include <assert.h>
+#include <bitset>
+#include <string>
+#include <sparsehash/sparse_hash_set>
 
-vector<vector<int> > v;
-int threshold;
 
+namespace NSubsetGenerator{
 
-void input() {
-    ifstream in("input.txt");
-    int n, m;
-    in >> n >> m >> threshold;
-    //threshold = 1;
-    v = vector<vector<int> >(n, vector<int>(m, 0));
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < m; ++j) {
-            in >> v[i][j];
+using std::vector;
+const size_t MAX_BITSET_SIZE = 192;
+typedef std::bitset<MAX_BITSET_SIZE> bitset;
+typedef vector<short> index_list;
+typedef vector<vector<bool> > matrix;
+
+index_list to_index_list(const bitset& bs) {
+    index_list ans;
+    for (size_t i = 0; i < bs.size(); ++i) {
+        if (bs[i]) {
+            ans.push_back(i);
         }
     }
+    return ans;
 }
 
-vector<vector<int> > get_start() {
-    vector<vector<int> > start;
-    cout << v.size() << ' ' << v[0].size() << endl;
-    for (int i = 0; i < v[0].size(); ++i) {
-        int cnt1 = 0, cnt0 = 0;
-        for (int j = 0; j < v.size(); ++j) {
-            if (v[j][i] == 1) ++cnt1;
-	    if (v[j][i] == 0) ++cnt0;
-        }
-        
-        if (cnt1 >= threshold) {
-            vector<int> cand(2, -1);
-            cand[1] = i;
-            start.push_back(cand);
-        }
+bitset to_bitset(const index_list& ind_list) {
+    bitset ans;
+    for (int i = 0; i < ind_list.size(); ++i) {
+        ans.set(ind_list[i]);
     }
-    return start;
+    return ans;
 }
 
 
-void gen() {
-    ofstream fout("output.txt");
-    vector<vector<int> > start = get_start();
-    int ans_cnt = start.size();
-    cout << start.size() << endl;
-    while(start.size() > 0) {
-        cout << "new iteration " << start.size();
-        cout.flush();
-        map<vector<int>, vector<int> > d;
-        for (int i = 0; i < start.size(); ++i) {
-            auto start_cut = start[i];
-            start_cut.pop_back();
-            d[start_cut].push_back(start[i][start[i].size() - 1]);
+template<typename T>
+void clear_vector(vector<T>& to_clear) {
+    vector<T> tmp;
+    tmp.swap(to_clear);
+}
+
+
+class TSubsetGenerator{
+    typedef google::sparse_hash_set<bitset, std::hash<bitset> > set;
+
+    vector<bitset> sets;
+
+    vector<bitset> get_simple_sets(const matrix& matr) const {
+        vector<bitset> ans;
+
+        size_t matr_size_x = matr.size();
+        size_t matr_size_y = matr[0].size();
+
+        for (size_t column = 0; column < matr_size_y; ++column) {
+            index_list column_result;
+            for (size_t row = 0; row < matr_size_x; ++row) {
+                if (matr[row][column]) {
+                    column_result.push_back(row);
+                }
+            }
+            if (column_result.size() > 0) {
+                ans.push_back(to_bitset(column_result));
+            }
+        }
+        return ans;
+    }
+
+    void update(set& to_update, bitset element) const {
+        bitset empty;
+
+        set elements_to_add;
+
+        elements_to_add.insert(element);
+
+        for (auto it = to_update.begin(); it != to_update.end(); ++it) {
+            bitset intersection = *it;
+            intersection &= element;
+            if (intersection != empty &&
+                to_update.find(intersection) == to_update.end()) {
+                elements_to_add.insert(intersection);
+            }
         }
 
-        vector<vector<int> > new_start;
-        map<vector<int>, vector<vector<int> > > val_ind;
-	int n_val = 0;
-        for (map<vector<int>, vector<int> >::iterator it = d.begin(); it != d.end(); ++it) {
-            for (int i = 0; i < it->second.size(); ++i) {
-                for (int j = i + 1; j < it->second.size(); ++j) {
-                    vector<int> cand = it->first;
-                    cand.push_back(it->second[i]);
-                    cand.push_back(it->second[j]);
-                    vector<int> cur_ind;
-		    for (int i = 0; i < v.size(); ++i) {
-			bool good = true;
-			for (int j = 1; j < cand.size(); ++j) {
-				if (v[i][cand[j]] != 1) {
-				   good = false;
-				   break;
-				}
-			}
-			if (good) {
-				cur_ind.push_back(i);
-			}
-		     }
-	             if (cur_ind.size() >= threshold) {
-			val_ind[cur_ind].push_back(cand);
-			n_val++;
-		     }
-		}
-	    }
+        while (elements_to_add.size() > 0) {
+            to_update.insert(*elements_to_add.begin());
+            elements_to_add.erase(elements_to_add.begin());
         }
-        cout << ' ' << n_val;
-        cout.flush();
-        start.clear();
-	
-	cout << " prunning ";
-	cout.flush();
-	for (auto it = val_ind.begin(); it != val_ind.end(); ++it) {
-	    if (it->second.size() == 1) {
-		start.push_back(it->second[0]);
-            } else {
-		vector<int> ans;
-		for (int i = 0; i < it->second.size(); ++i) {
-			vector<int> temp_ans(ans.size() + it->second[i].size());
-			merge(ans.begin(), ans.end(), it->second[i].begin(), it->second[i].end(), temp_ans.begin());
-			ans.clear();
-                        for (int j = 0; j < temp_ans.size(); ++j) {
-				if (j == 0 || temp_ans[j-1] != temp_ans[j]) ans.push_back(temp_ans[j]);
-			}
-		}
-		start.push_back(ans);
-	    }
-	    fout << it->first.size() << ' ';
-	    for (int i = 0; i < it->first.size(); ++i) {
-		fout << it->first[i] << ' ';
+    }
+
+    void generate_and_set(const matrix& matr) {
+        clear_vector(sets);
+
+        vector<bitset> simple_sets = get_simple_sets(matr);
+
+        set result_set;
+
+        for (size_t i = 0; i < simple_sets.size(); ++i) {
+            update(result_set, simple_sets[i]);
+        }
+
+        while (result_set.size() > 0) {
+            sets.push_back(*result_set.begin());
+            result_set.erase(result_set.begin());
+        }
+    }
+
+public:
+    TSubsetGenerator() {
+    }
+
+    void store(std::string filename) const {
+        std::ofstream fout(filename);
+        fout << sets.size() << '\n';
+        for (auto it = sets.begin(); it != sets.end(); ++it) {
+            index_list set_index_list = to_index_list(*it);
+            fout << set_index_list.size() << ' ';
+            for (size_t i = 0; i < set_index_list.size(); ++i) {
+                fout << set_index_list[i] << ' ';
             }
             fout << '\n';
-	}
-        ans_cnt += start.size();
-        cout << ' ' << start.size() << ' ' << ans_cnt << endl;
+        }
+        fout.flush();
+        fout.close();
     }
-}
+
+    void load(std::string filename) {
+        clear_vector(sets);
+        std::ifstream fin;
+        size_t sets_size;
+        fin >> sets_size;
+        sets.reserve(sets_size);
+        for (size_t set_index = 0; set_index < sets_size; ++set_index) {
+            size_t set_size;
+            fin >> set_size;
+            index_list set_index_list;
+            for (size_t i = 0; i < set_size; ++i) {
+                size_t element_index;
+                fin >> element_index;
+                set_index_list.push_back(element_index);
+            }
+            sets.push_back(to_bitset(set_index_list));
+        }
+    }
+
+    size_t get_sets_count() const {
+        return sets.size();
+    }
+
+    index_list get_set(size_t index) const {
+        return to_index_list(sets[index]);
+    }
+};
 
 
-int main() {
-    cout << "hello" << endl;
-    input();
-    cout << "input ok" << endl;
-    gen();
+} //namespace NSubsetGenerator
+
+int main(int argc, char *argv[]) {
+    NSubsetGenerator::TSubsetGenerator generator;
     return 0;
 }
