@@ -1,9 +1,13 @@
 #include <vector>
 #include <fstream>
+#include <unordered_set>
 #include <bitset>
 #include <string>
 #include <sparsehash/sparse_hash_set>
+#include <boost/numpy.hpp>
 
+namespace bp = boost::python;
+namespace bn = boost::numpy;
 
 namespace NSubsetGenerator{
 
@@ -12,6 +16,39 @@ const size_t MAX_BITSET_SIZE = 192;
 typedef std::bitset<MAX_BITSET_SIZE> bitset;
 typedef vector<short> index_list;
 typedef vector<vector<bool> > matrix;
+
+
+template<typename T>
+bn::ndarray vector_to_ndarray(const T &vector) {
+    Py_intptr_t shape[1] = { vector.size() };
+    bn::ndarray result = bn::zeros(
+        1,
+        shape,
+        bn::dtype::get_builtin<typename T::value_type>()
+    );
+    std::copy(
+        vector.begin(),
+        vector.end(),
+        reinterpret_cast<typename T::value_type*>(result.get_data())
+    );
+    return result;
+}
+
+
+matrix ndarray_to_matrix(const bn::ndarray& array) {
+    bp::tuple shape = bp::extract<bp::tuple>(array.attr("shape"));
+    size_t rows_count = bp::extract<size_t>(shape[0]);
+    size_t columns_count = bp::extract<size_t>(shape[1]);
+    matrix ans(rows_count);
+    for (size_t row_index = 0; row_index < rows_count; ++row_index) {
+        ans[row_index].resize(columns_count);
+        bn::ndarray row = bp::extract<bn::ndarray>(array[row_index]);
+        bool* data_ptr = reinterpret_cast<bool*>(row.get_data());
+        std::copy(data_ptr, data_ptr + columns_count, ans[row_index].begin());
+    }
+    return ans;
+}
+
 
 index_list to_index_list(const bitset& bs) {
     index_list ans;
@@ -22,6 +59,7 @@ index_list to_index_list(const bitset& bs) {
     }
     return ans;
 }
+
 
 bitset to_bitset(const index_list& ind_list) {
     bitset ans;
@@ -41,6 +79,8 @@ void clear_vector(vector<T>& to_clear) {
 
 class TSubsetGenerator{
     typedef google::sparse_hash_set<bitset, std::hash<bitset> > set;
+    //typedef std::unordered_set<bitset> set;
+
 
     vector<bitset> sets;
 
@@ -68,8 +108,11 @@ class TSubsetGenerator{
         bitset empty;
 
         set elements_to_add;
+        elements_to_add.set_deleted_key(bitset());
 
-        elements_to_add.insert(element);
+        if (element != empty) {
+            elements_to_add.insert(element);
+        }
 
         for (auto it = to_update.begin(); it != to_update.end(); ++it) {
             bitset intersection = *it;
@@ -81,30 +124,37 @@ class TSubsetGenerator{
         }
 
         while (elements_to_add.size() > 0) {
-            to_update.insert(*elements_to_add.begin());
-            elements_to_add.erase(elements_to_add.begin());
+            auto element = *elements_to_add.begin();
+            to_update.insert(element);
+            elements_to_add.erase(element);
         }
     }
 
-    void generate_and_set(const matrix& matr) {
+    void generate_and_set_matrix(const matrix& matr) {
         clear_vector(sets);
 
         vector<bitset> simple_sets = get_simple_sets(matr);
 
         set result_set;
+        result_set.set_deleted_key(bitset());
 
         for (size_t i = 0; i < simple_sets.size(); ++i) {
             update(result_set, simple_sets[i]);
         }
 
         while (result_set.size() > 0) {
-            sets.push_back(*result_set.begin());
-            result_set.erase(result_set.begin());
+            auto element = *result_set.begin();
+            sets.push_back(element);
+            result_set.erase(element);
         }
     }
 
 public:
     TSubsetGenerator() {
+    }
+
+    void generate_and_set(const bn::ndarray& input_matrix) {
+        generate_and_set_matrix(ndarray_to_matrix(input_matrix));
     }
 
     void store(std::string filename) const {
@@ -145,15 +195,22 @@ public:
         return sets.size();
     }
 
-    index_list get_set(size_t index) const {
-        return to_index_list(sets[index]);
+    bn::ndarray get_set(size_t index) const {
+        return vector_to_ndarray(to_index_list(sets[index]));
     }
 };
 
 
 } //namespace NSubsetGenerator
 
-int main(int argc, char *argv[]) {
-    NSubsetGenerator::TSubsetGenerator generator;
-    return 0;
-}
+
+BOOST_PYTHON_MODULE(generate_subsets) {
+    bn::initialize();
+    bp::class_<NSubsetGenerator::TSubsetGenerator>("SubsetGenerator")
+        .def("generate_and_set", &NSubsetGenerator::TSubsetGenerator::generate_and_set)
+        .def("store", &NSubsetGenerator::TSubsetGenerator::store)
+        .def("load", &NSubsetGenerator::TSubsetGenerator::load)
+        .def("get_sets_count", &NSubsetGenerator::TSubsetGenerator::get_sets_count)
+        .def("get_set", &NSubsetGenerator::TSubsetGenerator::get_set)
+    ;
+};
