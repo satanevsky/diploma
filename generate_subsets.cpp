@@ -174,7 +174,7 @@ public:
 
     void load(std::string filename) {
         clear_vector(sets);
-        std::ifstream fin;
+        std::ifstream fin(filename);
         size_t sets_size;
         fin >> sets_size;
         sets.reserve(sets_size);
