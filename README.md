@@ -1,17 +1,18 @@
 # diploma
 dependencies:
-1) boost-python
-2) boost-numpy
-3) google sparse-hash
-4) python
-5) scikit-learn
-6) numpy
-7) matplotlib
-8) pandas
-9) jupyter
-10) Cython
-11) wget
-12) pygco
+1) boost
+2) boost-python
+3) boost-numpy
+4) google sparse-hash
+5) python
+6) scikit-learn
+7) numpy
+8) matplotlib
+9) pandas
+10) jupyter
+11) Cython
+12) wget
+13) pygco
 how to run:
 1) make
 2) LD_LIBRARY_PATH="/usr/local/lib" jupyter notebook
