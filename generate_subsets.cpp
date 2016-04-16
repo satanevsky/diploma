@@ -1,9 +1,11 @@
+
 #include <vector>
 #include <fstream>
 #include <unordered_set>
 #include <bitset>
 #include <string>
 #include <sparsehash/sparse_hash_set>
+#include <sparsehash/dense_hash_set>
 #include <boost/numpy.hpp>
 
 namespace bp = boost::python;
@@ -80,6 +82,8 @@ void clear_vector(vector<T>& to_clear) {
 class TSubsetGenerator{
     typedef google::sparse_hash_set<bitset, std::hash<bitset> > set;
     //typedef std::unordered_set<bitset> set;
+    //typedef google::dense_hash_set<bitset, std::hash<bitset> > set;
+    
 
 
     vector<bitset> sets;
@@ -108,7 +112,8 @@ class TSubsetGenerator{
         bitset empty;
 
         set elements_to_add;
-        elements_to_add.set_deleted_key(bitset());
+        //elements_to_add.set_deleted_key(bitset());
+        //elements_to_add.set_empty_key(empty);
 
         if (element != empty) {
             elements_to_add.insert(element);
@@ -117,36 +122,41 @@ class TSubsetGenerator{
         for (auto it = to_update.begin(); it != to_update.end(); ++it) {
             bitset intersection = *it;
             intersection &= element;
-            if (intersection != empty &&
-                to_update.find(intersection) == to_update.end()) {
+            if (intersection != empty) {
                 elements_to_add.insert(intersection);
             }
         }
 
-        while (elements_to_add.size() > 0) {
-            auto element = *elements_to_add.begin();
+        for (auto it = elements_to_add.begin(); it != elements_to_add.end(); ++it) {
+            auto element = *it;
             to_update.insert(element);
-            elements_to_add.erase(element);
         }
     }
 
     void generate_and_set_matrix(const matrix& matr) {
         clear_vector(sets);
-
+        std::ofstream fout("log");
+        fout << matr.size() << ' ' << matr[0].size() << std::endl;
         vector<bitset> simple_sets = get_simple_sets(matr);
+        fout << simple_sets.size() << std::endl;
 
         set result_set;
-        result_set.set_deleted_key(bitset());
+        //result_set.set_deleted_key(bitset());
+        //result_set.set_empty_key(bitset());
+        
 
         for (size_t i = 0; i < simple_sets.size(); ++i) {
+            fout << i << ' ' << result_set.size() << std::endl;
             update(result_set, simple_sets[i]);
         }
 
-        while (result_set.size() > 0) {
-            auto element = *result_set.begin();
+        sets = vector<bitset>(result_set.begin(), result_set.end());
+
+        /*for(auto it = result_set.begin(); it != result_set.end(); ++it) {
+            auto element = *it;
             sets.push_back(element);
-            result_set.erase(element);
-        }
+            //result_set.erase(element);
+        }*/
     }
 
 public:
