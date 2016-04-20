@@ -41,12 +41,13 @@ matrix ndarray_to_matrix(const bn::ndarray& array) {
     bp::tuple shape = bp::extract<bp::tuple>(array.attr("shape"));
     size_t rows_count = bp::extract<size_t>(shape[0]);
     size_t columns_count = bp::extract<size_t>(shape[1]);
-    matrix ans(rows_count);
+    matrix ans(rows_count, std::vector<bool> (columns_count));
+    char* data_ptr = reinterpret_cast<char*>(array.get_data());
+    
     for (size_t row_index = 0; row_index < rows_count; ++row_index) {
-        ans[row_index].resize(columns_count);
-        bn::ndarray row = bp::extract<bn::ndarray>(array[row_index]);
-        bool* data_ptr = reinterpret_cast<bool*>(row.get_data());
-        std::copy(data_ptr, data_ptr + columns_count, ans[row_index].begin());
+        for (size_t col_index = 0; col_index < columns_count; ++col_index) {
+            ans[row_index][col_index] = data_ptr[rows_count * col_index + row_index];
+        }
     }
     return ans;
 }
@@ -105,6 +106,7 @@ class TSubsetGenerator{
                 ans.push_back(to_bitset(column_result));
             }
         }
+        
         return ans;
     }
 
@@ -139,6 +141,7 @@ class TSubsetGenerator{
         fout << matr.size() << ' ' << matr[0].size() << std::endl;
         vector<bitset> simple_sets = get_simple_sets(matr);
         fout << simple_sets.size() << std::endl;
+        if (simple_sets.size() != matr[0].size()) throw 1;
 
         set result_set;
         //result_set.set_deleted_key(bitset());

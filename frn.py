@@ -1,17 +1,24 @@
 import numpy as np
 from sklearn.base import BaseEstimator
+from joblib import Memory
 from pygco import pygco
+from common import forward_out
+
+
+mem_frn = Memory(cachedir='cache/frn')
+
+@forward_out("logs/frn.log")
+@mem_frn.cache
+def get_rel_feat_frn(params, X, feature_importances, importance_threshold):
+    frn = FeatureRelevanceNetwork(**params)
+    return frn.get_relevant_features(X, feature_importances, importance_threshold)
 
 
 class FeatureRelevanceNetwork(BaseEstimator):
     def __init__(self,
-                 inner_model,
-                 feature_importances_getter,
                  min_correlation=0.8,
-                 feature_importance_priority=1000000000000.0,
+                 feature_importance_priority=1000000.0,
                  feature_selection_threshold_coef=1.0):
-        self.inner_model = inner_model
-        self.feature_importances_getter = feature_importances_getter
         self.min_correlation = min_correlation
         self.feature_importance_priority = feature_importance_priority
         self.feature_selection_threshold_coef = feature_selection_threshold_coef
@@ -39,9 +46,31 @@ class FeatureRelevanceNetwork(BaseEstimator):
         edge_weights = edge_weights[:edges_added]
         return edges, edge_weights, unary_cost, pairwise_cost
 
-    def _get_relevant_features(self, X, feature_importances, importance_threshold):
+    def get_relevant_features(self, X, feature_importances, importance_threshold):
         edges, edge_weights, unary_cost, pairwise_cost = self._get_model_parameters(X, feature_importances, importance_threshold)
         return pygco.cut_general_graph(edges, edge_weights, unary_cost, pairwise_cost, n_iter=1, algorithm="expansion")
+
+
+
+
+class FeatureRelevanceNetworkWrapper(BaseEstimator):
+    def __init__(self,
+                 inner_model,
+                 feature_importances_getter,
+                 min_correlation=0.8,
+                 feature_importance_priority=1000000000000.0,
+                 feature_selection_threshold_coef=1.0):
+        self.inner_model = inner_model
+        self.feature_importances_getter = feature_importances_getter
+        self.min_correlation = min_correlation
+        self.feature_importance_priority = feature_importance_priority
+        self.feature_selection_threshold_coef = feature_selection_threshold_coef
+
+    def _get_reduced_params(self):
+        result = self.get_params(deep=False)
+        del result['inner_model']
+        del result['feature_importances_getter']
+        return result
 
     def _filter_X(self, X):
         #print type(X)
@@ -52,8 +81,7 @@ class FeatureRelevanceNetwork(BaseEstimator):
         #print feature_importances[:10]
         importance_threshold = feature_importances.mean() * self.feature_selection_threshold_coef
         #print feature_importances.mean(), importance_threshold, self.feature_selection_threshold_coef
-        self._relevant_feature_mask = self._get_relevant_features(X, feature_importances, importance_threshold) == 1
-        #print "important features", self._relevant_feature_mask.sum()
+        self._relevant_feature_mask = get_rel_feat_frn(self._get_reduced_params(), X, feature_importances, importance_threshold)
 
     def get_support(self, indices=False):
         if not indices:

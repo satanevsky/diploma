@@ -13,14 +13,15 @@ POSSIBLE_COMPLEX_FEATURES_PATH = "possible_complex_features.txt"
 def make_new_generator():
     start_time = time.time()
     X = get_data_keeper().get_common_x()
+    print "matrix shape before:", X.shape
     X[X!=1] = 0
-    to_drop = (X.sum(axis=0) >= (X.shape[0] / 2))
+    to_drop = (X.sum(axis=0) >= (X.shape[0] / 2)) | (X.sum(axis=0) == 0)
     to_drop = to_drop[to_drop].index
     X = X.drop(to_drop, axis=1)
     X.to_csv(RAW_X_BEFORE_SUBSETE_GENERATION_PATH)
-    print "matrix shape is:", X.shape
+    print "matrix shape after:", X.shape
     generator = SubsetGenerator()
-    generator.generate_and_set(X.as_matrix().astype(np.bool))
+    generator.generate_and_set(X.as_matrix().astype(np.uint8))
     print "generating done, time from start spent:", time.time() - start_time
     generator.store(POSSIBLE_COMPLEX_FEATURES_PATH)
     print "storing done, time from start spent:", time.time() - start_time

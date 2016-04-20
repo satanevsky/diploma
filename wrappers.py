@@ -1,13 +1,22 @@
 from copy import copy
+import numpy as np
 from sklearn.grid_search import GridSearchCV
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectFromModel
 from scipy.sparse import csr_matrix
 from xgboost import XGBClassifier
 from joblib import Memory
+from common import forward_out
 
 
-mem_xgb = Memory(cachedir='/cache/xgboost')
+mem_xgb = Memory(cachedir='cache/xgboost')
+
+@forward_out("logs/xgb.log")
+@mem_xgb.cache
+def fit_xgboost(params, X, y):
+    clf = XGBClassifier(**params)
+    clf.fit(X, y)
+    return clf
 
 
 class GridSearchCVWrapper(GridSearchCV):
@@ -15,13 +24,12 @@ class GridSearchCVWrapper(GridSearchCV):
         return self.best_estimator_.get_support(*args, **kwargs)
 
 
-def fit_xgboost(params, X, y):
-    clf = XBClassifier(**params)
-    clf.fit(X, y)
-    return clf
+class ModelBasedFeatureImportanceGetter(BaseEstimator):
+    def __init__(self, inner_model):
+        self.inner_model = inner_model
 
-
-fit_xgboost = mem_xgb.cache(fit_xgboost)
+    def get_feature_importances(self, X, y):
+        return self.inner_model.fit(X, y).feature_importances_
 
 
 class XGBoostClassifierFeatureImportances(XGBClassifier):
@@ -36,7 +44,7 @@ class XGBoostClassifierFeatureImportances(XGBClassifier):
         if X.shape[1] == 0:
             X = np.zeros((X.shape[0], 1))
         super(XGBoostClassifierFeatureImportances, self).fit(X, y)
-        self.__dict__.update(fit_xgboost(self.get_params(), X, y).copy().__dict__)
+        self.__dict__.update(fit_xgboost(self.get_params(), X, y).__dict__)
         self.__features_count = X.shape[1]
         return self
 

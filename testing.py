@@ -1,6 +1,8 @@
 from scipy.stats import norm
+import numpy as np
 from sklearn.cross_validation import cross_val_score, cross_val_predict, StratifiedKFold
 from sklearn.metrics import make_scorer, confusion_matrix, accuracy_score
+from data_keeper import get_data_keeper
 
 
 def test_model_with_drug(model, drug, metrics):
