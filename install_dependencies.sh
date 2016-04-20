@@ -24,6 +24,9 @@ sudo pip install cython
 sudo pip install scipy 
 sudo pip install scikit-learn 
 sudo pip install jupyter
+sudo pip install xgboost
+
+sudo easy_install joblib
 
 rm -f master.zip
 rm -f -r Boost.NumPy-master

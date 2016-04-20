@@ -28,6 +28,8 @@ dependencies:
 
 13) pygco
 
+14) xgboost
+
 how to run:
 
 1) make
