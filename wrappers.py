@@ -61,7 +61,7 @@ class MatrixCleaningWrapper(BaseEstimator):
 
     def _drop(self, X):
         X = X.drop(self._to_drop, axis=1, inplace=False)
-        return X
+        return X.as_matrix()
 
     def get_support(self, *args, **kwargs):
         return self.inner_model.get_support(*args, **kwargs)

@@ -17,14 +17,14 @@ def get_rel_feat_frn(params, X, feature_importances, importance_threshold):
 class FeatureRelevanceNetwork(BaseEstimator):
     def __init__(self,
                  min_correlation=0.8,
-                 feature_importance_priority=1000000.0,
+                 feature_importance_priority=1000000000000.0,
                  feature_selection_threshold_coef=1.0):
         self.min_correlation = min_correlation
         self.feature_importance_priority = feature_importance_priority
         self.feature_selection_threshold_coef = feature_selection_threshold_coef
 
     def _get_model_parameters(self, X, feature_importances, importance_threshold):
-        real_importances = np.array(feature_importances) - np.array(importance_threshold)
+        real_importances = (np.array(feature_importances) - np.array(importance_threshold)).astype(np.float64)
         real_importances /= np.sqrt((real_importances ** 2).mean())
         #print "real importances", (real_importances > 0).sum()
         unary_cost = np.zeros((X.shape[1], 2), dtype=np.float64)
