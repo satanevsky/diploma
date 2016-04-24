@@ -1,9 +1,9 @@
-
 #include <vector>
 #include <fstream>
 #include <unordered_set>
 #include <bitset>
 #include <string>
+#include <queue>
 #include <sparsehash/sparse_hash_set>
 #include <sparsehash/dense_hash_set>
 #include <boost/numpy.hpp>
@@ -14,7 +14,7 @@ namespace bn = boost::numpy;
 namespace NSubsetGenerator{
 
 using std::vector;
-const size_t MAX_BITSET_SIZE = 192;
+const size_t MAX_BITSET_SIZE = 160;
 typedef std::bitset<MAX_BITSET_SIZE> bitset;
 typedef vector<short> index_list;
 typedef vector<vector<bool> > matrix;
@@ -78,6 +78,21 @@ void clear_vector(vector<T>& to_clear) {
     vector<T> tmp;
     tmp.swap(to_clear);
 }
+
+
+class TPriorityBitsetComparator{
+public:
+    bool operator()(const std::pair<double, bitset>& a, const std::pair<double, bitset>& b) {
+        if (a.first > b.first) {
+            return true;
+        } else if (b.first < a.first) {
+            return false;
+        } else {
+            return a.second.count() > b.second.count();
+        }
+
+    }
+};
 
 
 class TSubsetGenerator{
@@ -163,6 +178,22 @@ class TSubsetGenerator{
         }*/
     }
 
+    std::pair<bitset, bitset> get_y_and_indexes_mask(bn::ndarray y, bn::ndarray indexes) {
+        bp::tuple shape = bp::extract<bp::tuple>(y.attr("shape"));
+        int size = bp::extract<int>(shape[0]);
+        bitset y_mask;
+        bitset indexes_mask;
+        for (size_t i = 0; i < size; ++i) {
+            int y_val = bp::extract<int>(y[i]);
+            int ind_val = bp::extract<int>(indexes[i]);
+            indexes_mask.set(ind_val);
+            if (y_val) {
+                y_mask.set(ind_val);
+            }
+        }
+        return std::make_pair(y_mask, indexes_mask);
+    }
+
 public:
     TSubsetGenerator() {
     }
@@ -243,6 +274,70 @@ public:
         sets.swap(sets_copy);
     }
 
+    void set_filtered_best_beta_binomial(double alpha_regularization,
+                                         double beta_regularization,
+                                         bn::ndarray y,
+                                         bn::ndarray indexes,
+                                         int max_store) {
+
+        std::pair<bitset, bitset> y_and_indexes_mask = get_y_and_indexes_mask(y, indexes);
+        bitset y_mask = y_and_indexes_mask.first;
+        bitset indexes_mask = y_and_indexes_mask.second;
+
+        sets_copy.clear();
+
+        std::priority_queue<std::pair<double, bitset>,
+                            vector<std::pair<double, bitset> >,
+                            TPriorityBitsetComparator> result_queue;
+
+        for (size_t i = 0; i < sets.size(); ++i) {
+            int in_tran_all = (sets[i] & indexes_mask).count();
+            int in_train_with_y_one = (sets[i] & y_mask).count();
+            double alpha = alpha_regularization + in_train_with_y_one;
+            double beta = beta_regularization + in_tran_all - in_train_with_y_one;
+            double priority = (alpha - 1) / (alpha + beta - 2);
+            result_queue.push(std::make_pair(priority, sets[i]));
+            while (result_queue.size() > max_store) {
+                result_queue.pop();
+            }
+        }
+
+        sets_copy.resize(result_queue.size());
+        size_t insert_index = result_queue.size();
+        while (!result_queue.empty()) {
+            --insert_index;
+            sets_copy[insert_index] = result_queue.top().second;
+            result_queue.pop();
+        }
+        sets.swap(sets_copy);
+    }
+
+    bn::ndarray get_count_and_y_true_statistics(bn::ndarray y, bn::ndarray indexes) {
+        std::pair<bitset, bitset> y_and_indexes_mask = get_y_and_indexes_mask(y, indexes);
+        bitset y_mask = y_and_indexes_mask.first;
+        bitset indexes_mask = y_and_indexes_mask.second;
+
+        size_t max_stat_value = MAX_BITSET_SIZE;
+        vector<vector<size_t> > statistics(max_stat_value + 1, vector<size_t>(max_stat_value + 1, 0));
+
+        for (size_t i = 0; i < sets.size(); ++i) {
+            int in_tran_all = (sets[i] & indexes_mask).count();
+            int in_train_with_y_one = (sets[i] & y_mask).count();
+            ++statistics[in_tran_all][in_train_with_y_one];
+        }
+
+        bn::ndarray statistics_ndarray = bn::zeros(bp::make_tuple(max_stat_value + 1, max_stat_value + 1),
+                                                   bn::dtype::get_builtin<int>());
+
+        for (size_t i = 0; i < statistics.size(); ++i) {
+            for (size_t j = 0; j < statistics[i].size(); ++j) {
+                statistics_ndarray[i][j] = statistics[i][j];
+            }
+        }
+
+        return statistics_ndarray;
+    }
+
 
     bn::ndarray get_set(size_t index) const {
         return vector_to_ndarray(to_index_list(sets[index]));
@@ -264,5 +359,7 @@ BOOST_PYTHON_MODULE(generate_subsets) {
         .def("set_filtered_min_size", &NSubsetGenerator::TSubsetGenerator::set_filtered_min_size)
         .def("set_filtered_have_ones_in_positions", &NSubsetGenerator::TSubsetGenerator::set_filtered_have_ones_in_positions)
         .def("restore", &NSubsetGenerator::TSubsetGenerator::restore)
+        .def("get_count_and_y_true_statistics", &NSubsetGenerator::TSubsetGenerator::get_count_and_y_true_statistics)
+        .def("set_filtered_best_beta_binomial", &NSubsetGenerator::TSubsetGenerator::set_filtered_best_beta_binomial)
     ;
 };
