@@ -88,6 +88,7 @@ class TSubsetGenerator{
 
 
     vector<bitset> sets;
+    vector<bitset> sets_copy;
 
     vector<bitset> get_simple_sets(const matrix& matr) const {
         vector<bitset> ans;
@@ -208,6 +209,41 @@ public:
         return sets.size();
     }
 
+    void restore() {
+        if (sets_copy.size() > 0) {
+            sets.swap(sets_copy);
+            sets_copy.clear();
+        }
+    }
+
+    void set_filtered_min_size(int min_size) {
+        sets_copy.clear();
+        for (size_t i = 0; i < sets.size(); ++i) {
+            if (to_index_list(sets[i]).size() >= min_size) {
+                sets_copy.push_back(sets[i]);
+            }
+        }
+        sets.swap(sets_copy);
+    }
+
+    void set_filtered_have_ones_in_positions(bn::ndarray positions) {
+        bitset mask;
+        bp::tuple shape = bp::extract<bp::tuple>(positions.attr("shape"));
+        int size = bp::extract<int>(shape[0]);
+        for (size_t i = 0; i < size; ++i) {
+            int position = bp::extract<int>(positions[i]);
+            mask.set(position);
+        }
+        sets_copy.clear();
+        for (size_t i = 0; i < sets.size(); ++i) {
+            if ((sets[i] & mask) == sets[i]) {
+                sets_copy.push_back(sets[i]);
+            }
+        }
+        sets.swap(sets_copy);
+    }
+
+
     bn::ndarray get_set(size_t index) const {
         return vector_to_ndarray(to_index_list(sets[index]));
     }
@@ -225,5 +261,8 @@ BOOST_PYTHON_MODULE(generate_subsets) {
         .def("load", &NSubsetGenerator::TSubsetGenerator::load)
         .def("get_sets_count", &NSubsetGenerator::TSubsetGenerator::get_sets_count)
         .def("get_set", &NSubsetGenerator::TSubsetGenerator::get_set)
+        .def("set_filtered_min_size", &NSubsetGenerator::TSubsetGenerator::set_filtered_min_size)
+        .def("set_filtered_have_ones_in_positions", &NSubsetGenerator::TSubsetGenerator::set_filtered_have_ones_in_positions)
+        .def("restore", &NSubsetGenerator::TSubsetGenerator::restore)
     ;
 };

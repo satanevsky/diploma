@@ -7,6 +7,7 @@ from scipy.sparse import csr_matrix
 from xgboost import XGBClassifier
 from joblib import Memory
 from common import forward_out
+from generate_subsets import SubsetGenerator
 
 
 mem_xgb = Memory(cachedir='cache/xgboost')
@@ -142,3 +143,8 @@ class ModelBasedFeatureImportanceGetter(BaseEstimator):
 
     def get_feature_importances(self, X, y):
         return self.inner_model.fit(X, y).feature_importances_
+
+
+class SubsetGeneratorWrapper(SubsetGenerator):
+    def __deepcopy__(self, memo):
+        return self

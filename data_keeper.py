@@ -28,6 +28,7 @@ class DataKeeper(object):
                 u'PYRA: Pyrazinamide ',
                 u'STRE: Streptomycin ',
                 u'CYCL: Cycloserine ']
+
     def get_possible_second_level_drugs(self):
         return [u'ETHI: Ethionamide/ Prothionamide ',
                 u'PARA: Para-aminosalicyclic acid ',

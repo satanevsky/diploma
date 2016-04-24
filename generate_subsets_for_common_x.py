@@ -4,11 +4,11 @@ from os.path import isfile
 import numpy as np
 import pandas as pd
 from data_keeper import get_data_keeper
-from generate_subsets import SubsetGenerator
-
+from wrappers import SubsetGeneratorWrapper
 
 RAW_X_BEFORE_SUBSETE_GENERATION_PATH = "raw_X_before_subsets_generation.csv"
 POSSIBLE_COMPLEX_FEATURES_PATH = "possible_complex_features.txt"
+get_generator_result = None
 
 
 def make_new_generator():
@@ -30,14 +30,18 @@ def make_new_generator():
     return generator, X
 
 
-def get_ready_generator():
-    if isfile(RAW_X_BEFORE_SUBSETE_GENERATION_PATH) and isfile(POSSIBLE_COMPLEX_FEATURES_PATH):
-        generator = SubsetGenerator()
-        generator.load(RAW_X_BEFORE_SUBSETE_GENERATION_PATH)
-        X = pd.read_csv(RAW_X_BEFORE_SUBSETE_GENERATION_PATH)
-        return generator, X
-    else:
-        return make_new_generator()
+def get_ready_generator(compute_if_not_found=True):
+    global get_generator_result
+    if get_generator_result is None:
+        if isfile(RAW_X_BEFORE_SUBSETE_GENERATION_PATH) and isfile(POSSIBLE_COMPLEX_FEATURES_PATH):
+            generator = SubsetGeneratorWrapper()
+            generator.load(POSSIBLE_COMPLEX_FEATURES_PATH)
+            X = pd.read_csv(RAW_X_BEFORE_SUBSETE_GENERATION_PATH, index_col=0)
+            get_generator_result = generator, X
+        else:
+            if compute_if_not_found:
+                get_generator_result = make_new_generator()
+    return get_generator_result
 
 
 __all__ = ['get_ready_generator']
