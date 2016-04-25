@@ -129,20 +129,20 @@ class SimplePriorityGetter(object):
         self._generator.restore()
 
 
-class ValidityCalculator(object):
-    def __init__(self, all_true_statistics):
-        self._all_true_statistics = all_true_statistics
-
-    def __call__(self, (a, b)):
-        ans = 0.0
-        for i, row in enumerate(self._all_true_statistics):
-            for j, val in enumerate(row):
-                if val != 0:
-                    ans += (betaln(a + j, b + i - j) - betaln(a, b)) * val
-        return -ans
-
-
 class BayesBasedPriorityGetter(object):
+
+    class ValidityCalculator(object):
+        def __init__(self, all_true_statistics):
+            self._all_true_statistics = all_true_statistics
+
+        def __call__(self, (a, b)):
+            ans = 0.0
+            for i, row in enumerate(self._all_true_statistics):
+                for j, val in enumerate(row):
+                    if val != 0:
+                        ans += (betaln(a + j, b + i - j) - betaln(a, b)) * val
+            return -ans
+
     def __init__(self, max_features, reg_param=None):
         self._reg_param = reg_param
         self._max_features = max_features
@@ -155,8 +155,7 @@ class BayesBasedPriorityGetter(object):
             all_true_statistics = generator.get_count_and_y_true_statistics(y, indexes)
             validity_calculator = ValidityCalculator(all_true_statistics)
             ret = minimize(validity_calculator, [1, 1], bounds=[(-1, None), (-1, None)])
-            assert ret.success
-            self._ret_param = ret.x
+            self._reg_param = ret.x
 
     def __enter__(self):
         alpha_reg, beta_reg = self._reg_param
