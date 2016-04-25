@@ -1,6 +1,6 @@
 import time
 import sys
-from os.path import isfile
+from os.path import isfile, join
 import numpy as np
 import pandas as pd
 from data_keeper import get_data_keeper
@@ -41,8 +41,8 @@ def get_ready_generator(compute_if_not_found=True, folder=None):
             possible_complex_features_path = join(folder, POSSIBLE_COMPLEX_FEATURES_PATH)
         if isfile(raw_X_before_subsets_generation_path) and isfile(possible_complex_features_path):
             generator = SubsetGeneratorWrapper()
-            generator.load(POSSIBLE_COMPLEX_FEATURES_PATH)
-            X = pd.read_csv(RAW_X_BEFORE_SUBSET_GENERATION_PATH, index_col=0)
+            generator.load(possible_complex_features_path)
+            X = pd.read_csv(raw_X_before_subsets_generation_path, index_col=0)
             get_generator_result = generator, X
         else:
             if compute_if_not_found:

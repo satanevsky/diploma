@@ -152,8 +152,8 @@ class BayesBasedPriorityGetter(object):
         self._y = y.astype(np.int32)
         self._indexes = indexes.astype(np.int32)
         if self._reg_param is None:
-            all_true_statistics = generator.get_count_and_y_true_statistics(y, indexes)
-            validity_calculator = ValidityCalculator(all_true_statistics)
+            all_true_statistics = generator.get_count_and_y_true_statistics(self._y, self._indexes)
+            validity_calculator = BayesBasedPriorityGetter.ValidityCalculator(all_true_statistics)
             ret = minimize(validity_calculator, [1, 1], bounds=[(-1, None), (-1, None)])
             self._reg_param = ret.x
 
