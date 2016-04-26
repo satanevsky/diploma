@@ -19,7 +19,7 @@ def make_new_generator():
     to_drop = (X.sum(axis=0) >= (X.shape[0] / 2)) | (X.sum(axis=0) < 3)
     to_drop = to_drop[to_drop].index
     X = X.drop(to_drop, axis=1)
-    X.to_csv(RAW_X_BEFORE_SUBSETE_GENERATION_PATH)
+    X.to_csv(RAW_X_BEFORE_SUBSET_GENERATION_PATH)
     print "matrix shape after:", X.shape
     sys.stdout.flush()
     generator = SubsetGenerator()

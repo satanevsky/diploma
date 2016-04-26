@@ -30,7 +30,15 @@ dependencies:
 
 14) xgboost
 
+15) boruta
+
+16) networkx
+
+17) hyperopt
+
 how to run:
+
+1) sudo sh install_dependencies.sh
 
 1) make
 
