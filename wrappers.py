@@ -12,6 +12,7 @@ from generate_subsets import SubsetGenerator
 
 mem_xgb = Memory(cachedir='cache/xgboost')
 
+
 @forward_out("logs/xgb.log")
 @mem_xgb.cache
 def fit_xgboost(params, X, y):
@@ -32,6 +33,9 @@ class ModelBasedFeatureImportanceGetter(BaseEstimator):
     def get_feature_importances(self, X, y):
         return self.inner_model.fit(X, y).feature_importances_
 
+    def get_support(self, *args, **kwargs):
+        return self.inner_model.get_support(*args, **kwargs)
+
 
 class XGBoostClassifierFeatureImportances(XGBClassifier):
     @property
@@ -49,8 +53,13 @@ class XGBoostClassifierFeatureImportances(XGBClassifier):
         self.__features_count = X.shape[1]
         return self
 
+    def get_support(self, indices=False):
+        if indices:
+            return np.arange(self._features_count)
+        else:
+            return np.ones(self._features_count, dtype=np.bool)
+
     def predict(self, X):
-        print type(X)
         if X.shape[1] == 0:
             X = np.zeros((X.shape[0], 1))
         return super(XGBoostClassifierFeatureImportances, self).predict(X)
@@ -64,8 +73,19 @@ class MatrixCleaningWrapper(BaseEstimator):
         X = X.drop(self._to_drop, axis=1, inplace=False)
         return X.as_matrix()
 
-    def get_support(self, *args, **kwargs):
-        return self.inner_model.get_support(*args, **kwargs)
+    def get_support(self, indices=False):
+        if indices == False:
+            raise KeyError("indices should be true")
+        support = self._inner_model.get_support(indices=True)
+        return [self._features_invert_index[el] for el in support]
+
+    def _set_dropped(self, X, to_drop):
+        self._to_drop = to_drop
+        self._features_invert_index = list()
+        to_drop_set = set(to_drop)
+        for el in X.columns.values:
+            if el not in to_drop_set:
+                self._features_invert_index.append(el)
 
     def fit(self, X, y):
         X = X.copy()
@@ -74,7 +94,7 @@ class MatrixCleaningWrapper(BaseEstimator):
         ones_count = X.sum(axis=0)
         to_drop = ones_count[(ones_count <= 2) |
                   (ones_count >= (X.shape[0] / 3))].index
-        self._to_drop = to_drop
+        self._set_dropped(X, to_drop)
         X = self._drop(X)
         print "cleaner", X.shape
         self.inner_model.fit(X, y)
