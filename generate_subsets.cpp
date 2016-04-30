@@ -43,7 +43,7 @@ matrix ndarray_to_matrix(const bn::ndarray& array) {
     size_t columns_count = bp::extract<size_t>(shape[1]);
     matrix ans(rows_count, std::vector<bool> (columns_count));
     char* data_ptr = reinterpret_cast<char*>(array.get_data());
-    
+
     for (size_t row_index = 0; row_index < rows_count; ++row_index) {
         for (size_t col_index = 0; col_index < columns_count; ++col_index) {
             ans[row_index][col_index] = data_ptr[rows_count * col_index + row_index];
@@ -99,11 +99,15 @@ class TSubsetGenerator{
     typedef google::sparse_hash_set<bitset, std::hash<bitset> > set;
     //typedef std::unordered_set<bitset> set;
     //typedef google::dense_hash_set<bitset, std::hash<bitset> > set;
-    
+
 
 
     vector<bitset> sets;
     vector<bitset> sets_copy;
+
+    matrix raw_matxix;
+
+    vector<bitset> feature_bitsets;
 
     vector<bitset> get_simple_sets(const matrix& matr) const {
         vector<bitset> ans;
@@ -122,7 +126,7 @@ class TSubsetGenerator{
                 ans.push_back(to_bitset(column_result));
             }
         }
-        
+
         return ans;
     }
 
@@ -162,7 +166,7 @@ class TSubsetGenerator{
         set result_set;
         //result_set.set_deleted_key(bitset());
         //result_set.set_empty_key(bitset());
-        
+
 
         for (size_t i = 0; i < simple_sets.size(); ++i) {
             fout << i << ' ' << result_set.size() << std::endl;
@@ -342,6 +346,87 @@ public:
     bn::ndarray get_set(size_t index) const {
         return vector_to_ndarray(to_index_list(sets[index]));
     }
+
+    bitset get_feature_bitset(size_t feature_index) {
+        bitset ans;
+        for (size_t i = 0; i < raw_matxix.size(); ++i) {
+            if (raw_matxix[i][feature_index]) {
+                ans.set(i);
+            }
+        }
+        return ans;
+    }
+
+    void set_raw_matrix(bn::ndarray matrix_ndarray) {
+        raw_matxix = ndarray_to_matrix(matrix_ndarray);
+        feature_bitsets.clear();
+        for (size_t i = 0; i < raw_matxix[0].size(); ++i) {
+            feature_bitsets.push_back(get_feature_bitset(i));
+        }
+    }
+
+    vector<size_t> select_indexes(vector<size_t> possible_indexes, bitset result_mask) {
+        size_t checked_variants_limit = 100000;
+        vector<vector<size_t> > variants;
+        variants.push_back(vector<size_t>());
+        bitset ones_mask;
+
+        for (size_t i = 0; i < MAX_BITSET_SIZE; ++i) {
+            ones_mask.set(i);
+        }
+
+        for (size_t checked_variants = 0;
+            checked_variants < variants.size();
+            ++checked_variants) {
+            bitset current_mask = ones_mask;
+            vector<size_t> variant = variants[checked_variants];
+            for (size_t i = 0; i < variant.size(); ++i) {
+                current_mask &= feature_bitsets[possible_indexes[variant[i]]];
+            }
+            if (current_mask == result_mask) {
+                return variant;
+            }
+            size_t start_val = 0;
+            if (variant.size() > 0) {
+                start_val = variant[variant.size() - 1] + 1;
+            }
+            for (; start_val < possible_indexes.size(); ++start_val) {
+                if (variants.size() < checked_variants_limit) {
+                    vector<size_t> new_variant = variant;
+                    new_variant.push_back(start_val);
+                    variants.push_back(new_variant);
+                } else {
+                    break;
+                }
+            }
+        }
+        return vector<size_t>(1, MAX_BITSET_SIZE + 10);
+    }
+
+
+    bn::ndarray get_probable_features_indexes(bn::ndarray objects_indexes) {
+        vector<size_t> possible_features_indexes;
+        bp::tuple shape = bp::extract<bp::tuple>(objects_indexes.attr("shape"));
+        size_t size = bp::extract<size_t>(shape[0]);
+        vector<bool> possible_features_indexes_mask(raw_matxix[0].size(), true);
+        bitset objects_indexes_mask;
+
+        for (size_t i = 0; i < size; ++i) {
+            size_t object_index = bp::extract<size_t>(objects_indexes[i]);
+            objects_indexes_mask.set(object_index);
+            for (size_t j = 0; j < raw_matxix[object_index].size(); ++j) {
+                possible_features_indexes_mask[j] = possible_features_indexes_mask[j] & raw_matxix[object_index][j];
+            }
+        }
+        for (size_t i = 0; i < possible_features_indexes_mask.size(); ++i) {
+            if (possible_features_indexes_mask[i]) {
+                possible_features_indexes.push_back(i);
+            }
+        }
+
+        return vector_to_ndarray(select_indexes(possible_features_indexes, objects_indexes_mask));
+    }
+
 };
 
 
