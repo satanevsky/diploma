@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.grid_search import GridSearchCV
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectFromModel
+from sklearn.ensemble import RandomForestClassifier
 from scipy.sparse import csr_matrix
 from xgboost import XGBClassifier
 from joblib import Memory
@@ -141,7 +142,7 @@ class ModelFeatureSelectionWrapper(BaseEstimator):
 
     def _get_feature_selector(self):
         if self.feature_selector is None:
-            self.feature_selector = SelectFromModel(XGBoostClassifierFeatureImportances(n_estimators=40),
+            self.feature_selector = SelectFromModel(RandomForestClassifier(n_estimators=100),
                                                     threshold='{}*mean'.format(float(self.feature_selection_threshold_coef)))
         return self.feature_selector
 

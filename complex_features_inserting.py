@@ -111,7 +111,7 @@ class ExtenderStrategy(object):
         return np.concatenate((simple_features, to_add), axis=1)
 
 
-class AndBasedSimpleFeaturesIndexesGetter(object):
+class AndBasedSimpleFeaturesIndexGetter(object):
     def __init__(self, use_raw_candidate=False, all_features=None):
         self._use_raw_candidate = use_raw_candidate
         self._all_features = all_features
