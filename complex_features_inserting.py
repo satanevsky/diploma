@@ -26,10 +26,15 @@ class ExtenderStrategy(object):
     def set_generator(self, generator):
         self._generator = generator
 
-    def _generate_candidates(self):
+    def _generate_candidates(self, return_raw_candidate=False):
         print self._generator.get_sets_count()
         for i in xrange(self._generator.get_sets_count()):
-            yield self._get_translated_indexes(self._generator.get_set(i))
+            raw_indexes = self._generator.get_set(i)
+            translated_indexes = self._get_translated_indexes(current_set)
+            if not return_raw_candidate:
+                yield translated_indexes
+            else:
+                yield translated_indexes, raw_indexes
 
     def _pre_filter(self, candidate):
         return self._pre_filter_strategy.pre_filter(candidate)
@@ -47,8 +52,8 @@ class ExtenderStrategy(object):
         translated_indexes_with_garbage = self._index_translation[candidate]
         return translated_indexes_with_garbage[translated_indexes_with_garbage >= 0]
 
-    def _get_simple_feature_indexes(self, simple_features, candidate):
-        return self._simple_features_indexes_getter.get_features_indexes(simple_features, candidate, self._indexes)
+    def _get_simple_feature_indexes(self, simple_features, candidate, raw_candidate):
+        return self._simple_features_indexes_getter.get_features_indexes(simple_features, candidate, raw_candidate, self._indexes)
 
     def _set_result_feature_sets(self, feature_sets):
         self._result_feature_sets = feature_sets
@@ -71,13 +76,14 @@ class ExtenderStrategy(object):
         self._estimate_parameters(simple_features, y, indexes)
         self._simple_features_count = simple_features.shape[1]
         with self._priority_getter:
-            for candidate_index, candidate in enumerate(self._generate_candidates()):
+            for candidate_index, (candidate, raw_candidate) in enumerate(self._generate_candidates(return_raw_candidate=True)):
                 #print candidate_index,
                 if self._pre_filter(candidate):
                     candidate_feature_rows = simple_features[candidate]
                     y_values = y[candidate]
                     simple_feature_indexes = self._get_simple_feature_indexes(simple_features,
-                                                                              candidate)
+                                                                              candidate,
+                                                                              raw_candidate)
                     if simple_feature_indexes is None:
                         continue
                     priority = self._get_candidate_priority(candidate,
@@ -105,18 +111,27 @@ class ExtenderStrategy(object):
         return np.concatenate((simple_features, to_add), axis=1)
 
 
-class AndBasedSimpleFeaturesIndexesGetter:
-    def get_features_indexes(self, simple_features, candidate, indexes):
-        return and_arrays(simple_features[candidate]).nonzero()[0]
+class AndBasedSimpleFeaturesIndexesGetter(object):
+    def __init__(self, use_raw_candidate=False, all_features=None):
+        self._use_raw_candidate = use_raw_candidate
+        self._all_features = all_features
+
+    def get_features_indexes(self, simple_features, candidate, raw_candidate, indexes):
+        if self._use_raw_candidate:
+            objects_features = self._all_features[raw_candidate]
+        else:
+            objects_features = simple_features[candidate]
+        return and_arrays(objects_features).nonzero()[0]
 
 
-class MinSimpleFeaturesIndexGetter:
-    def __init__(self, generator, max_check):
+class MinSimpleFeaturesIndexGetter(object):
+    def __init__(self, generator, max_check, use_raw_candidate=False):
         self._generator = generator
         self._max_check = max_check
+        self._use_raw_candidate = use_raw_candidate
 
-    def get_features_indexes(self, simple_features, candidate, indexes):
-        raw_indexes = indexes[candidate]
+    def get_features_indexes(self, simple_features, candidate, raw_candidate, indexes):
+        raw_indexes = raw_candidate if self._use_raw_candidate else indexes[candidate]
         result = self._generator.get_probable_features_indexes(raw_indexes, self._max_check)
         if result[0] < 1000:
             return result
