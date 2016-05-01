@@ -365,8 +365,10 @@ public:
         }
     }
 
-    vector<size_t> select_indexes(vector<size_t> possible_indexes, bitset result_mask) {
-        size_t checked_variants_limit = 100000;
+    vector<size_t> select_indexes(vector<size_t> possible_indexes,
+                                  bitset result_mask,
+                                  size_t checked_variants_limit
+                                ) {
         vector<vector<size_t> > variants;
         variants.push_back(vector<size_t>());
         bitset ones_mask;
@@ -384,7 +386,11 @@ public:
                 current_mask &= feature_bitsets[possible_indexes[variant[i]]];
             }
             if (current_mask == result_mask) {
-                return variant;
+                vector<size_t> result;
+                for (size_t i = 0; i < variant.size(); ++i) {
+                    result.push_back(possible_indexes[variant[i]]);
+                }
+                return result;
             }
             size_t start_val = 0;
             if (variant.size() > 0) {
@@ -404,7 +410,7 @@ public:
     }
 
 
-    bn::ndarray get_probable_features_indexes(bn::ndarray objects_indexes) {
+    bn::ndarray get_probable_features_indexes(bn::ndarray objects_indexes, size_t checked_variants_limit) {
         vector<size_t> possible_features_indexes;
         bp::tuple shape = bp::extract<bp::tuple>(objects_indexes.attr("shape"));
         size_t size = bp::extract<size_t>(shape[0]);
@@ -424,7 +430,7 @@ public:
             }
         }
 
-        return vector_to_ndarray(select_indexes(possible_features_indexes, objects_indexes_mask));
+        return vector_to_ndarray(select_indexes(possible_features_indexes, objects_indexes_mask, checked_variants_limit));
     }
 
 };

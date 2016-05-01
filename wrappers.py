@@ -49,6 +49,7 @@ class XGBoostClassifierFeatureImportances(XGBClassifier):
         if X.shape[1] == 0:
             X = np.zeros((X.shape[0], 1))
         super(XGBoostClassifierFeatureImportances, self).fit(X, y)
+        self._features_count = X.shape[1]
         self.__dict__.update(fit_xgboost(self.get_params(), X, y).__dict__)
         self.__features_count = X.shape[1]
         return self

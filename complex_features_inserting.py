@@ -76,6 +76,7 @@ class ExtenderStrategy(object):
         self._simple_features_count = simple_features.shape[1]
         with self._priority_getter:
             for candidate_index, candidate in enumerate(self._generate_candidates()):
+                #print candidate_index,
                 if self._pre_filter(candidate):
                     candidate_feature_rows = simple_features[candidate]
                     y_values = y[candidate]
@@ -104,7 +105,6 @@ class ExtenderStrategy(object):
         for i, simple_features_indexes in enumerate(self._result_feature_sets):
             simple_features_values = simple_features[:,simple_features_indexes]
             result = and_arrays(simple_features_values.T)
-            print to_add.shape, result.shape
             to_add[:,i] = result
         return np.concatenate((simple_features, to_add), axis=1)
 
@@ -115,12 +115,13 @@ class AndBasedSimpleFeaturesIndexesGetter:
 
 
 class MinSimpleFeaturesIndexGetter:
-    def __init__(self, generator):
+    def __init__(self, generator, max_check):
         self._generator = generator
+        self._max_check = max_check
 
     def get_features_indexes(self, simple_features, candidate, indexes):
         raw_indexes = indexes[candidate]
-        result = self._generator.get_probable_features_indexes(raw_indexes)
+        result = self._generator.get_probable_features_indexes(raw_indexes, self._max_check)
         if result[0] < 1000:
             return result
         else:
@@ -238,4 +239,7 @@ class ComplexFeaturesAdderWrapper(BaseEstimator):
         return self.inner_model.predict(extended_features)
 
     def get_support(self, indices=False):
-        return self.extender_strategy.get_support(indices=indices)
+        if indices == False:
+            raise KeyError("indices should be true")
+        extender_support = self.extender_strategy.get_support(indices=True)
+        return [extender_support[i] for i in self.inner_model.get_support(indices=True)]
