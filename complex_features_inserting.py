@@ -200,12 +200,11 @@ class BayesBasedPriorityGetter(object):
 
 
 class ComplexFeaturesAdderWrapper(BaseEstimator):
-    def __init__(self, inner_model, matrix_before_generating, features_names, objects_names, extender_strategy):
+    def __init__(self, inner_model, matrix_before_generating, features_names, extender_strategy):
         self.inner_model = inner_model
         self.matrix_before_generating = matrix_before_generating
         self.features_names = features_names
         self.extender_strategy = extender_strategy
-        self.objects_names = objects_names
 
     def _get_simple_features(self, indexes):
         return self.matrix_before_generating[indexes]
