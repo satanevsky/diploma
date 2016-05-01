@@ -77,7 +77,7 @@ class MatrixCleaningWrapper(BaseEstimator):
         if indices == False:
             raise KeyError("indices should be true")
         support = self._inner_model.get_support(indices=True)
-        return [self._features_invert_index[el] for el in support]
+        return np.array([self._features_invert_index[el] for el in support])
 
     def _set_dropped(self, X, to_drop):
         self._to_drop = to_drop
@@ -144,8 +144,17 @@ class ModelFeatureSelectionWrapper(BaseEstimator):
                                                     threshold='{}*mean'.format(float(self.feature_selection_threshold_coef)))
         return self.feature_selector
 
-    def get_support(self, *args, **kwargs):
-        return self.feature_selector.get_support(*args, **kwargs)
+    def get_support(self, indices=False):
+        current_support = self.feature_selector.get_support(indices=True)
+        inner_support = self.inner_model.get_support(indices=False)
+        result_support_indices = current_support[inner_support]
+        if indices:
+            return result_support_indices
+        else:
+            result = np.zeros(current_support.shape, dtype=np.bool)
+            result[result_support_indices] = True
+            return result
+
 
     def fit(self, X, y):
         X = self._get_feature_selector().fit_transform(X, y)
@@ -163,6 +172,9 @@ class ModelBasedFeatureImportanceGetter(BaseEstimator):
 
     def get_feature_importances(self, X, y):
         return self.inner_model.fit(X, y).feature_importances_
+
+    def get_support(self, indices=False):
+        return self._inner_model.get_support(indices=indices)
 
 
 class SubsetGeneratorWrapper(SubsetGenerator):

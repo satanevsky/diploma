@@ -400,7 +400,7 @@ public:
                 }
             }
         }
-        return vector<size_t>(1, MAX_BITSET_SIZE + 10);
+        return vector<size_t>(1, MAX_BITSET_SIZE + 1000000);
     }
 
 

@@ -10,7 +10,13 @@ def and_arrays(arrays):
 
 
 class ExtenderStrategy(object):
-    def __init__(self, max_features, priority_getter, pre_filter, generator, max_index=150):
+    def __init__(self,
+                 max_features,
+                 priority_getter,
+                 pre_filter,
+                 generator,
+                 simple_features_indexes_getter,
+                 max_index=150):
         self._max_features = max_features
         self._generator = generator
         self._max_features_sets_storing = 1000000
@@ -19,6 +25,7 @@ class ExtenderStrategy(object):
         self._max_index = max_index
         self._priority_getter = priority_getter
         self._pre_filter_strategy = pre_filter
+        self._simple_features_indexes_getter = simple_features_indexes_getter
 
     def set_generator(self, generator):
         self._generator = generator
@@ -38,13 +45,14 @@ class ExtenderStrategy(object):
         self._index_translation = -1 * np.ones(self._max_index, dtype=np.int32)
         for i, el in enumerate(indexes):
             self._index_translation[el] = i
+        self._indexes = indexes
 
     def _get_translated_indexes(self, candidate):
         translated_indexes_with_garbage = self._index_translation[candidate]
         return translated_indexes_with_garbage[translated_indexes_with_garbage >= 0]
 
-    def _get_simple_feature_indexes(self, simple_features, candidate_feature_rows, candidate):
-        return and_arrays(candidate_feature_rows).nonzero()[0]
+    def _get_simple_feature_indexes(self, simple_features, candidate):
+        raise NotImplemented()
 
     def _set_result_feature_sets(self, feature_sets):
         self._result_feature_sets = feature_sets
@@ -55,8 +63,8 @@ class ExtenderStrategy(object):
     def _clean_storing_feature_sets(self):
         self._best_feature_sets = self._get_top_priority_feature_sets()
 
-    def _get_candidate_priority(self, candidate, y_values, simple_feature_indexes):
-        return self._priority_getter.get_candidate_priority(candidate, y_values, simple_feature_indexes)
+    def _get_candidate_priority(self, candidate, y_values, simple_feature_indexes, candidate_index):
+        return self._priority_getter.get_candidate_priority(candidate, y_values, simple_feature_indexes, candidate_index)
 
     def fit(self, simple_features, y, indexes):
         if self._generator is None:
@@ -65,6 +73,7 @@ class ExtenderStrategy(object):
         print indexes
         self._set_indexes(indexes)
         self._estimate_parameters(simple_features, y, indexes)
+        self._simple_features_count = simple_features.shape[1]
         with self._priority_getter:
             for candidate_index, candidate in enumerate(self._generate_candidates()):
                 if self._pre_filter(candidate):
@@ -73,6 +82,8 @@ class ExtenderStrategy(object):
                     simple_feature_indexes = self._get_simple_feature_indexes(simple_features,
                                                                               candidate_feature_rows,
                                                                               candidate)
+                    if simple_feature_indexes is None:
+                        continue
                     priority = self._get_candidate_priority(candidate,
                                                             y_values,
                                                             simple_feature_indexes,
@@ -84,6 +95,11 @@ class ExtenderStrategy(object):
         self._set_result_feature_sets([el[1] for el in self._get_top_priority_feature_sets()])
         return self
 
+    def get_support(self, indices=False):
+        if indices == False:
+            raise KeyError("indices should be True")
+        return [[el] for el in xrange(self._simple_features_count)] + self._result_feature_sets
+
     def transform(self, simple_features):
         to_add = np.zeros((simple_features.shape[0], len(self._result_feature_sets)), dtype=np.int32)
         for i, simple_features_indexes in enumerate(self._result_feature_sets):
@@ -92,6 +108,24 @@ class ExtenderStrategy(object):
             print to_add.shape, result.shape
             to_add[:,i] = result
         return np.concatenate((simple_features, to_add), axis=1)
+
+
+class AndBasedSimpleFeaturesIndexesGetter:
+    def get_features_indexes(self, simple_features, candidate, indexes):
+        return and_arrays(simple_features[candidate]).nonzero()[0]
+
+
+class MinSimpleFeaturesIndexGetter:
+    def __init__(self, generator):
+        self._generator = generator
+
+    def get_features_indexes(self, simple_features, candidate, indexes):
+        raw_indexes = indexes[candidate]
+        result = self._generator.get_probable_features_indexes(raw_indexes)
+        if result[0] < 1000:
+            return result
+        else:
+            return None
 
 
 class MinSizePreFilter(object):
@@ -114,12 +148,10 @@ class SimplePriorityGetter(object):
         self._generator = generator
 
     def get_candidate_priority(self, candidate, y_values, simple_feature_indexes, candidate_index):
-        print y_values,
         if y_values.sum() < len(y_values) or len(y_values) < 3:
             result = -1
         else:
-            result = 3 + len(y_values) - len(simple_feature_indexes)
-        print result
+            result = len(y_values)
         return result
 
     def __enter__(self):
@@ -130,7 +162,6 @@ class SimplePriorityGetter(object):
 
 
 class BayesBasedPriorityGetter(object):
-
     class ValidityCalculator(object):
         def __init__(self, all_true_statistics):
             self._all_true_statistics = all_true_statistics
@@ -206,3 +237,6 @@ class ComplexFeaturesAdderWrapper(BaseEstimator):
             simple_features = self._get_simple_features(indexes)
         extended_features = self._extend_features(simple_features)
         return self.inner_model.predict(extended_features)
+
+    def get_support(self, indices=False):
+        return self.extender_strategy.get_support(indices=indices)
