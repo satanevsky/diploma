@@ -43,6 +43,7 @@ def get_ready_generator(compute_if_not_found=True, folder=None):
             generator = SubsetGeneratorWrapper()
             generator.load(possible_complex_features_path)
             X = pd.read_csv(raw_X_before_subsets_generation_path, index_col=0)
+            generator.set_raw_matrix(X.as_matrix().astype(np.uint8))
             get_generator_result = generator, X
         else:
             if compute_if_not_found:

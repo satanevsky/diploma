@@ -52,7 +52,7 @@ class ExtenderStrategy(object):
         return translated_indexes_with_garbage[translated_indexes_with_garbage >= 0]
 
     def _get_simple_feature_indexes(self, simple_features, candidate):
-        raise NotImplemented()
+        return self._simple_features_indexes_getter.get_features_indexes(simple_features, candidate, self._indexes)
 
     def _set_result_feature_sets(self, feature_sets):
         self._result_feature_sets = feature_sets
@@ -80,7 +80,6 @@ class ExtenderStrategy(object):
                     candidate_feature_rows = simple_features[candidate]
                     y_values = y[candidate]
                     simple_feature_indexes = self._get_simple_feature_indexes(simple_features,
-                                                                              candidate_feature_rows,
                                                                               candidate)
                     if simple_feature_indexes is None:
                         continue

@@ -447,5 +447,6 @@ BOOST_PYTHON_MODULE(generate_subsets) {
         .def("get_count_and_y_true_statistics", &NSubsetGenerator::TSubsetGenerator::get_count_and_y_true_statistics)
         .def("set_filtered_best_beta_binomial", &NSubsetGenerator::TSubsetGenerator::set_filtered_best_beta_binomial)
         .def("get_probable_features_indexes", &NSubsetGenerator::TSubsetGenerator::get_probable_features_indexes)
+        .def("set_raw_matrix", &NSubsetGenerator::TSubsetGenerator::set_raw_matrix)
     ;
 };
