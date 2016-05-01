@@ -17,3 +17,7 @@ def forward_out(filename):
         return result
     return decorate
 
+
+def and_arrays(arrays):
+    arrays_sum = arrays.sum(axis=0)
+    return (arrays_sum == len(arrays)).astype(arrays.dtype)

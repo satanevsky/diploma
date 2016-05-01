@@ -2,11 +2,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.special import betaln
 from sklearn.base import BaseEstimator
-
-
-def and_arrays(arrays):
-    arrays_sum = arrays.sum(axis=0)
-    return (arrays_sum == len(arrays)).astype(arrays.dtype)
+from common import and_arrays
 
 
 class ExtenderStrategy(object):

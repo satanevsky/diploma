@@ -1,4 +1,5 @@
-from scipy.stats import norm
+from itertools import izip
+from scipy.stats import norm, chi2_contingency
 import numpy as np
 from sklearn.cross_validation import cross_val_score, cross_val_predict, StratifiedKFold
 from sklearn.metrics import make_scorer, confusion_matrix, accuracy_score
@@ -58,3 +59,11 @@ def results_differ_p_value(y_true, y1, y2):
     norm_stat = diff.mean() / diff.std() * np.sqrt(diff.shape[0])
     quantile = norm.cdf(norm_stat)
     return min(quantile, 1.0 - quantile)
+
+
+def test_features_combimation(combination, X, y):
+    combination_feature = and_arrays(X[:,combination].T)
+    matr = np.zeros((2, 2), dtype=np.int32)
+    for y_true, y_pred in izip(y, combination_feature):
+        matr[y_true, y_pred] += 1
+    return chi2_contingency(matr)[1]

@@ -181,3 +181,20 @@ class ModelBasedFeatureImportanceGetter(BaseEstimator):
 class SubsetGeneratorWrapper(SubsetGenerator):
     def __deepcopy__(self, memo):
         return self
+
+class AsMatrixWrapper(BaseEstimator):
+    def __init__(self, inner_model):
+        self.inner_model = inner_model
+
+    def fit(self, X, y):
+        self._feature_names = np.array(list(X.columns.values))
+        self.inner_model.fit(X.as_matrix(), y)
+        return self
+
+    def predict(self, X):
+        return self.inner_model.predict(X.as_matrix())
+
+    def get_support(self, indices=False):
+        if indices == False:
+            raise KeyError("indices should be true")
+        return self._feature_names[self.inner_model.get_support(indices=True)]
