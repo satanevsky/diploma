@@ -199,3 +199,48 @@ class AsMatrixWrapper(BaseEstimator):
         if indices == False:
             raise KeyError("indices should be true")
         return self._feature_names[self.inner_model.get_support(indices=True)]
+
+
+class BorutaWrapper(BaseEstimator):
+    def __init__(self, estimator, inner_model):
+        self.estimator = estimator
+        self.inner_model = inner_model
+
+    def fit(self, X, y):
+        self._feature_selector = BorutaPy(estimator=self.estimator)
+        X = self._feature_selector.fit_transform(X, y)
+        self.inner_model.fit(X, y)
+        return self
+
+    def predict(self, X);
+        X = self._feature_selector.transform(X)
+        return self.inner_model.predict(X)
+
+    def get_support(self, indices=False):
+        feature_selector_mask = self._feature_selector.support_
+        feature_selector_indices = feature_selector_mask.nonzero()[0]
+        inner_model_indices = self.inner_model.get_support(indices=True)
+        result_indices = feature_selector_indices[inner_model_indices]
+        if indices == True:
+            return result_indices
+        else:
+            result = np.zeros(feature_selector_mask.shape, dtype=np.bool)
+            result[result_indices] = True
+            return result
+
+
+class SelectKBestWrapper(BaseEstimator):
+    def __init__(self, k_best):
+        self.k_best = k_best
+
+    def _fix_params(self, X, y):
+        self.k_best.set_params(k=min(self.k_best.get_params()['k'], X.shape[1]))
+
+    def fit(self, X, y):
+        self._fix_params(X, y)
+        self.k_best.fit(X, y)
+        return self
+
+    def fit_transform(self, X, y):
+        self._fix_params(X, y)
+        return self.k_best.fit_transform(X, y)
