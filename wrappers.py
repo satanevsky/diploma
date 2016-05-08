@@ -134,6 +134,13 @@ class SparseWrapper(BaseEstimator):
         return self.inner_model.predict(X)
 
 
+def get_support_for_feature_selection_wrapper(
+    feature_selector_indices,
+    inner_indices,
+    indices,
+    ):
+
+
 class ModelFeatureSelectionWrapper(BaseEstimator):
     def __init__(self, inner_model, feature_selection_threshold_coef=3):
         self.inner_model = inner_model
