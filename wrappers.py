@@ -212,7 +212,7 @@ class BorutaWrapper(BaseEstimator):
         self.inner_model.fit(X, y)
         return self
 
-    def predict(self, X);
+    def predict(self, X):
         X = self._feature_selector.transform(X)
         return self.inner_model.predict(X)
 
@@ -230,7 +230,8 @@ class BorutaWrapper(BaseEstimator):
 
 
 class SelectKBestWrapper(BaseEstimator):
-    def __init__(self, k_best):
+    def __init__(self, inner_model, k_best):
+        self.inner_model = inner_model
         self.k_best = k_best
 
     def _fix_params(self, X, y):
@@ -238,9 +239,10 @@ class SelectKBestWrapper(BaseEstimator):
 
     def fit(self, X, y):
         self._fix_params(X, y)
-        self.k_best.fit(X, y)
+        X = self.k_best.fit_transform(X, y)
+        self.inner_model.fit(X, y)
         return self
 
-    def fit_transform(self, X, y):
-        self._fix_params(X, y)
-        return self.k_best.fit_transform(X, y)
+    def predict(self, X):
+        X = self.k_best.transform(X)
+        return self.inner_model.predict(X)

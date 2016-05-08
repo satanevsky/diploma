@@ -16,6 +16,7 @@ from complex_features_insertion import MinSimpleFeaturesIndexGetter
 from complex_features_insertion import AndBasedSimpleFeaturesIndexGetter
 from complex_features_insertion import ExtenderStrategy
 from trials_keeper import TrialsFactory
+from frn import FeatureRelevanceNetworkWrapper
 
 RANDOM_STATE = 42
 

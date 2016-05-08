@@ -66,11 +66,11 @@ def test_models_with_drugs(models, drugs, metrics=ALL_METRICS, as_indexes=False)
     for model_name, model in models:
         for drug_name in drugs:
             result[(model_name, drug_name)] = test_model_with_drug(
-                                                model,
-                                                drug_name,
-                                                metrics,
-                                                as_indexes
-                                              )
+                model,
+                drug_name,
+                metrics,
+                as_indexes,
+            )
     return result
 
 

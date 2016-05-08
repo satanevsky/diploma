@@ -3,6 +3,7 @@ from sklearn.base import BaseEstimator
 from joblib import Memory
 from pygco import pygco
 from common import forward_out
+from numba import jit
 
 
 mem_frn = Memory(cachedir='cache/frn')
@@ -12,6 +13,24 @@ mem_frn = Memory(cachedir='cache/frn')
 def get_rel_feat_frn(params, X, feature_importances, importance_threshold):
     frn = FeatureRelevanceNetwork(**params)
     return frn.get_relevant_features(X, feature_importances, importance_threshold)
+
+
+@jit(nopython=True)
+def do_params_estimation_heavy_job(
+    correlation_coefficient,
+    min_correlation,
+    edges,
+    edge_weights,
+    ):
+    edges_added = 0
+    for i in xrange(correlation_coefficient.shape[0]):
+        for j in xrange(i + 1, correlation_coefficient.shape[1]):
+            if correlation_coefficient[i, j] >= min_correlation:
+                edges[edges_added, 0] = i
+                edges[edges_added, 1] = j
+                edge_weights[edges_added] = correlation_coefficient[i, j]
+                edges_added += 1
+    return edges_added
 
 
 class FeatureRelevanceNetwork(BaseEstimator):
@@ -26,7 +45,7 @@ class FeatureRelevanceNetwork(BaseEstimator):
     def _get_model_parameters(self, X, feature_importances, importance_threshold):
         real_importances = (np.array(feature_importances) - np.array(importance_threshold)).astype(np.float64)
         real_importances /= np.sqrt((real_importances ** 2).mean())
-        print "real importances", (real_importances > 0).sum()
+        #print "real importances", (real_importances > 0).sum()
         unary_cost = np.zeros((X.shape[1], 2), dtype=np.float64)
         unary_cost[:,0] = real_importances * self.feature_importance_priority
         pairwise_cost = np.array([[0.0, 1.0],
@@ -35,13 +54,12 @@ class FeatureRelevanceNetwork(BaseEstimator):
         edges_count = ((correlation_coefficient >= self.min_correlation - 0.1).sum() - correlation_coefficient.shape[0]) / 2
         edges = np.zeros((edges_count + 10, 2), dtype=np.uint32)
         edge_weights = np.zeros(edges_count + 10, dtype=np.float64)
-        edges_added = 0
-        for i in xrange(correlation_coefficient.shape[0]):
-            for j in xrange(i + 1, correlation_coefficient.shape[1]):
-                if correlation_coefficient[i][j] >= self.min_correlation:
-                    edges[edges_added] = np.array([i, j])
-                    edge_weights[edges_added] = correlation_coefficient[i][j]
-                    edges_added += 1
+        edges_added = do_params_estimation_heavy_job(
+            correlation_coefficient,
+            self.min_correlation,
+            edges,
+            edge_weights,
+        )
         edges = edges[:edges_added]
         edge_weights = edge_weights[:edges_added]
         return edges, edge_weights, unary_cost, pairwise_cost
@@ -103,4 +121,3 @@ class FeatureRelevanceNetworkWrapper(BaseEstimator):
     def predict(self, X):
         X = self._filter_X(X)
         return self.inner_model.predict(X)
-
