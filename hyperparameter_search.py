@@ -1,5 +1,6 @@
 from collections import defaultdict
-from hyperopt import hp
+import traceback
+from hyperopt import hp, STATUS_OK, STATUS_FAIL, Trials
 from hyperopt.pyll import scope
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -14,7 +15,7 @@ from complex_features_insertion import BayesBasedPriorityGetter
 from complex_features_insertion import MinSimpleFeaturesIndexGetter
 from complex_features_insertion import AndBasedSimpleFeaturesIndexGetter
 from complex_features_insertion import ExtenderStrategy
-
+from trials_keeper import TrialsFactory
 
 RANDOM_STATE = 42
 
@@ -252,3 +253,60 @@ def get_simple_feature_adder_wrapper_params(
         features_names=list(matrix_before_generating.columns.values),
         extender_strategy=extender_strategy
     )
+
+
+def get_objective_function(X, y, metrics_getter, callback=None):
+    def objective(model):
+        start_time = time.time()
+        try:
+            metrics, loss = metrics_getter(model, X, y)
+            result = {
+                'status': STATUS_OK,
+                'loss': loss,
+                'full_metrics': metrics,
+                'time_calculated': time.time(),
+                'time_spent': time.time() - start_time,
+            }
+        except:
+            result = {
+                'status': STATUS_FAIL,
+                'traceback': traceback.format_exc(),
+                'time_calculated': time.time(),
+                'time_spent': time.time() - start_time,
+            }
+        if callback is not None:
+            callback(result)
+    return objective
+
+
+class HyperParameterSearcher(BaseEstimator):
+    def __init__(self, params, trials_factory, metrics_getter, max_evals=100):
+        self.params = params
+        self.trials_factory = trials_factory
+        self.metrics_getter = metrics_getter
+
+    def fit(self, X, y):
+        trials = self.trials_factory.get_new_trials()
+        try:
+            self._result_model = fmin(
+                get_objective_function(
+                    X,
+                    y,
+                    self.metrics_getter,
+                    callback=lambda result: self.trials_factory.flush()
+                ),
+                space=self.params,
+                algo=tpe.suggest,
+                max_evals=self.max_evals,
+                trials=trials,
+            )
+        finally:
+            self.trials_factory.flush()
+        self._result_model.fit(X, y)
+        return self
+
+    def predict(self, X):
+        return self._result_model.predict(X)
+
+    def get_support(self, indices=False):
+        return self._result_model.get_support(indices=indices)
