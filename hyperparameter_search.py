@@ -14,7 +14,8 @@ from complex_features_insertion import SimplePriorityGetter
 from complex_features_insertion import BayesBasedPriorityGetter
 from complex_features_insertion import MinSimpleFeaturesIndexGetter
 from complex_features_insertion import AndBasedSimpleFeaturesIndexGetter
-from complex_features_insertion import ExtenderStrategy
+from complex_features_insertion import ExtenderStrategy, \
+                                       NothingDoingExtenderStrategy
 from trials_keeper import TrialsFactory
 from frn import FeatureRelevanceNetworkWrapper
 
@@ -48,12 +49,30 @@ def get_xgb_model(*args, **kwargs):
 
 def get_xgboost_params(name="xgboost_common"):
     return scope.get_xgb_model(
-        n_estimators=hp.quniform(get_full_name(name, "n_estimators"), 1, 200, 1),
-        max_depth=hp.quniform(get_full_name(name, 'max_depth'), 1, 13, 1),
-        min_child_weight=hp.quniform(get_full_name(name, 'min_child_weight'), 1, 6, 1),
-        subsample=hp.uniform(get_full_name(name, 'subsample'), 0.5, 1),
-        gamma=hp.uniform(get_full_name(name, 'gamma'), 0.5, 1),
-        colsample_bytree=hp.uniform(get_full_name(name, 'colsample_bytree'), 0.05, 1.0),
+        n_estimators=hp.quniform(
+            get_full_name(name, "n_estimators"),
+            1, 200, 1,
+        ),
+        max_depth=hp.quniform(
+            get_full_name(name, 'max_depth'),
+            1, 13, 1,
+        ),
+        min_child_weight=hp.quniform(
+            get_full_name(name, 'min_child_weight'),
+            1, 6, 1,
+        ),
+        subsample=hp.uniform(
+            get_full_name(name, 'subsample'),
+            0.5, 1,
+        ),
+        gamma=hp.uniform(
+            get_full_name(name, 'gamma'),
+            0.5, 1,
+        ),
+        colsample_bytree=hp.uniform(
+            get_full_name(name, 'colsample_bytree'),
+            0.05, 1.0,
+        ),
         nthread=-1,
         seed=RANDOM_STATE,
     )
@@ -76,7 +95,10 @@ def get_model_based_feature_selection_model(*args, **kwargs):
 def get_model_based_feature_selector_params(
         inner_model_params,
         name='model_based_feature_selector'
+        estimator=None,
     ):
+    if estimator is None:
+        estimator = get_feature_selector_estimator_params()
     return scope.get_model_based_feature_selection_model(
         inner_model=inner_model_params,
         feature_selection_threshold_coef=hp.loguniform(get_full_name(name, "threshold"), -5, 5),
@@ -90,11 +112,16 @@ def get_boruta_feature_selector(*args, **kwargs):
 
 def get_boruta_feature_selector_params(
         inner_model_params,
-        name='boruta_common'
+        name='boruta_common',
+        estimator=None,
     ):
+    if estimator is None:
+        estimator=get_model_based_feature_selector_params(
+            name=get_full_name(name, 'estimator'),
+        )
     return scope.get_boruta_feature_selector(
         estimator=estimator,
-        inner_model=inner_model_params
+        inner_model=inner_model_params,
     )
 
 
@@ -103,8 +130,9 @@ def get_k_best(*args, **kwargs):
     return SelectKBestWrapper(SelectKBest(*args, **kwargs))
 
 
-def get_k_best_params(name='k_best_selector'):
+def get_k_best_params(inner_model_params, name='k_best_selector'):
     return scope.get_k_best(
+        inner_model=inner_model_params,
         k=hp.qloguniform(get_full_name(name, 'k'), 0, 5, 1),
         score_func=hp.choice(get_full_name(name, 'score'), (chi2, f_classif)),
     )
@@ -119,21 +147,23 @@ def get_feature_selector_estimator_params(name='feature_selector_estimator'):
     )
 
 
-def get_feature_selector_params(name='feature_selector_params'):
+def get_feature_selector_params(inner_model_params, name='feature_selector_params'):
+    model_based_estimator = get_model_based_feature_selector_params()
     return hp.choice(
             name, (
-                get_k_best_params(name=get_full_name(name, 'k_best')),
+                get_k_best_params(
+                    inner_model_params=inner_model_params,
+                    name=get_full_name(name, 'k_best'),
+                ),
                 get_boruta_feature_selector_params(
                     name=get_full_name(name, 'boruta'),
-                    inner_model_params=get_feature_selector_estimator_params(
-                        name=get_full_name(name, 'boruta_estimator'),
-                    ),
+                    estimator=model_based_estimator,
+                    inner_model_params=inner_model_params,
                 ),
                 get_model_based_feature_selector_params(
                     name=get_full_name(name, 'model_based_selector'),
-                    inner_model_params=get_feature_selector_estimator_params(
-                        name=get_full_name(name, 'model_based_estimator'),
-                    )
+                    estimator=model_based_estimator,
+                    inner_model_params=inner_model_params,
                 ),
             ),
         )
@@ -156,7 +186,10 @@ def get_bayes_based_priority_getter(*args, **kwargs):
 
 def get_bayes_based_priority_getter_params(name='bayes_based_priority_getter_common'):
     return scope.get_bayes_based_priority_getter(
-        max_features=hp.quniform(get_full_name(name, 'max_features'), 0, 10, 1),
+        max_features=hp.quniform(
+            get_full_name(name, 'max_features'),
+            0, 10, 1,
+        ),
     )
 
 
@@ -177,7 +210,10 @@ def get_and_based_index_getter(*args, **kwargs):
 def get_and_based_index_getter_params(name="and_based_index_getter_common"):
     all_features = get_ready_generator()[1].as_matrix()
     return scope.get_and_based_index_getter_params(
-        use_raw_candidate=hp.choice(get_full_name(name, 'use_raw_candidate'), (False, True)),
+        use_raw_candidate=hp.choice(
+            get_full_name(name, 'use_raw_candidate'),
+            (False, True)
+        ),
         all_features=all_features,
     )
 
@@ -187,16 +223,25 @@ def get_min_simple_features_index_getter(*args, **kwargs):
     return MinSimpleFeaturesIndexGetter(*args, **kwargs)
 
 
-def get_min_simple_features_index_getter_params(name="min_simple_features_index_getter_common"):
+def get_min_simple_features_index_getter_params(
+    name="min_simple_features_index_getter_common"
+    ):
     generator = get_ready_generator()[0]
     return scope.get_min_simple_features_index_getter(
         generator=generator,
-        use_raw_candidate=hp.choice(get_full_name(name, 'use_raw_candidate'), (False, True)),
+        use_raw_candidate=hp.choice(
+            get_full_name(name, 'use_raw_candidate'),
+            (False, True),
+        ),
     )
 
 
 def get_index_getter_params(name='features_index_getter_common'):
-    return hp.choice(name, get_and_based_index_getter_params(), get_min_simple_features_index_getter_params())
+    return hp.choice(
+        name,
+        get_and_based_index_getter_params(),
+        get_min_simple_features_index_getter_params()
+    )
 
 
 @scope.define
@@ -221,6 +266,33 @@ def get_complex_features_adder_wrapper(*args, **kwargs):
     return ComplexFeaturesAdderWrapper(*args, **kwargs)
 
 
+@scope.define
+def get_frn(*args, **kwargs):
+    return FeatureRelevanceNetwork(*args, **kwargs)
+
+
+def get_frn_params(
+    inner_model,
+    feature_importances_getter=None,
+    name='frn_common'
+    ):
+    if feature_importances_getter is None:
+        feature_importances_getter = get_feature_selector_estimator_params()
+
+    return scope.get_frn(
+        inner_model=inner_model,
+        feature_importances_getter=feature_importances_getter,
+        feature_importance_priority=hp.qloguniform(
+            get_full_name(name, 'feature_importance_priority'),
+            0, 15, 1,
+        ),
+        feature_selection_threshold_coef=hp.qloguniform(
+            get_full_name(name, 'threshold_coef'),
+            0, 10, 1,
+        ),
+    )
+
+
 def get_simple_feature_adder_wrapper_params(
         inner_model,
         max_features=None,
@@ -241,18 +313,24 @@ def get_simple_feature_adder_wrapper_params(
                 get_full_name(name, 'max_features'),
                 -1, 10, 1,
             )
-    extender_strategy = scope.get_extender_strategy(
-        max_features=max_features,
-        priority_getter=priority_getter,
-        pre_filter=pre_filter,
-        generator=get_ready_generator()[0],
-        simple_features_indexes_getter=simple_features_index_getter,
+    extender_strategy = hp.choice(
+        get_full_name(name, 'extender_strategy'),
+        (
+            scope.get_extender_strategy(
+                max_features=max_features,
+                priority_getter=priority_getter,
+                pre_filter=pre_filter,
+                generator=get_ready_generator()[0],
+                simple_features_indexes_getter=simple_features_index_getter,
+            ),
+            NothingDoingExtenderStrategy(),
+        )
     )
     return scope.get_complex_features_adder_wrapper(
         inner_model=inner_model,
         matrix_before_generating=matrix_before_generating.as_matrix(),
         features_names=list(matrix_before_generating.columns.values),
-        extender_strategy=extender_strategy
+        extender_strategy=extender_strategy,
     )
 
 

@@ -139,30 +139,35 @@ def get_support_for_feature_selection_wrapper(
     inner_indices,
     indices,
     ):
-
+    result_support_indices = feature_selector_indices[inner_indices]
+    if indices:
+        return result_support_indices
+    else:
+        result = np.zeros(feature_selector_indices.shape, dtype=np.bool)
+        result[result_support_indices] = True
+        return result
 
 class ModelFeatureSelectionWrapper(BaseEstimator):
-    def __init__(self, inner_model, feature_selection_threshold_coef=3):
+    def __init__(self, estimator, inner_model, feature_selection_threshold_coef=3):
+        self.estimator=estimator
         self.inner_model = inner_model
         self.feature_selector = None
         self.feature_selection_threshold_coef = feature_selection_threshold_coef
 
     def _get_feature_selector(self):
         if self.feature_selector is None:
-            self.feature_selector = SelectFromModel(RandomForestClassifier(n_estimators=100),
+            self.feature_selector = SelectFromModel(self.estimator,
                                                     threshold='{}*mean'.format(float(self.feature_selection_threshold_coef)))
         return self.feature_selector
 
     def get_support(self, indices=False):
-        current_support = self.feature_selector.get_support(indices=True)
+        feature_selector_support = self.feature_selector.get_support(indices=True)
         inner_support = self.inner_model.get_support(indices=False)
-        result_support_indices = current_support[inner_support]
-        if indices:
-            return result_support_indices
-        else:
-            result = np.zeros(current_support.shape, dtype=np.bool)
-            result[result_support_indices] = True
-            return result
+        return get_support_for_feature_selection_wrapper(
+            feature_selector_support,
+            inner_support,
+            indices,
+        )
 
 
     def fit(self, X, y):
@@ -227,13 +232,11 @@ class BorutaWrapper(BaseEstimator):
         feature_selector_mask = self._feature_selector.support_
         feature_selector_indices = feature_selector_mask.nonzero()[0]
         inner_model_indices = self.inner_model.get_support(indices=True)
-        result_indices = feature_selector_indices[inner_model_indices]
-        if indices == True:
-            return result_indices
-        else:
-            result = np.zeros(feature_selector_mask.shape, dtype=np.bool)
-            result[result_indices] = True
-            return result
+        return get_support_for_feature_selection_wrapper(
+            feature_selector_indices,
+            inner_model_indices,
+            indices,
+        )
 
 
 class SelectKBestWrapper(BaseEstimator):
@@ -253,3 +256,12 @@ class SelectKBestWrapper(BaseEstimator):
     def predict(self, X):
         X = self.k_best.transform(X)
         return self.inner_model.predict(X)
+
+    def get_support(self, indices=False):
+        feature_selector_support = self.k_best.get_support(indices=True)
+        inner_model_support = self.inner_model.get_support(indices=True)
+        return get_support_for_feature_selection_wrapper(
+            feature_selector_support,
+            inner_model_support,
+            indices,
+        )

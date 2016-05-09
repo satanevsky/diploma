@@ -8,7 +8,7 @@ from numba import jit
 
 mem_frn = Memory(cachedir='cache/frn')
 
-#@forward_out("logs/frn.log")
+@forward_out("logs/frn.log")
 @mem_frn.cache
 def get_rel_feat_frn(params, X, feature_importances, importance_threshold):
     frn = FeatureRelevanceNetwork(**params)
@@ -88,22 +88,18 @@ class FeatureRelevanceNetworkWrapper(BaseEstimator):
         self.feature_selection_threshold_coef = feature_selection_threshold_coef
 
     def _get_reduced_params(self):
-        result = self.get_params(deep=False)
+        result = self.get_params(deep=False).copy()
         del result['inner_model']
         del result['feature_importances_getter']
         return result
 
     def _filter_X(self, X):
-        print type(X)
         result = np.array(X)[:,self._relevant_feature_mask.astype(np.bool)]
-        print "shape:", result.shape
         return result
 
     def _set_relevant_feature_mask(self, X, y):
         feature_importances = self.feature_importances_getter.get_feature_importances(X, y)
-        print feature_importances[:10]
         importance_threshold = feature_importances.mean() * self.feature_selection_threshold_coef
-        print feature_importances.mean(), importance_threshold, self.feature_selection_threshold_coef, importance_threshold.sum()
         self._relevant_feature_mask = get_rel_feat_frn(self._get_reduced_params(), X, feature_importances, importance_threshold)
 
     def get_support(self, indices=False):

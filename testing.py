@@ -14,13 +14,15 @@ OBJECTS = 'objects'
 TRUE_VALUES = "true_values"
 F1 = 'f1_score'
 
-ALL_METRICS = [CONFUSION_MATRIX,
-               ACCURACY,
-               FEATURES,
-               RAW_PREDICTIONS,
-               OBJECTS,
-               TRUE_VALUES,
-               F1]
+ALL_METRICS = [
+    CONFUSION_MATRIX,
+    ACCURACY,
+    FEATURES,
+    RAW_PREDICTIONS,
+    OBJECTS,
+    TRUE_VALUES,
+    F1,
+]
 
 
 def test_model_with_drug(model, drug, metrics, as_indexes, n_folds=10):

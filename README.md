@@ -36,6 +36,8 @@ dependencies:
 
 17) hyperopt
 
+18) numba
+
 how to run:
 
 1) sudo sh install_dependencies.sh

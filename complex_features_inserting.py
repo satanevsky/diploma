@@ -5,6 +5,27 @@ from sklearn.base import BaseEstimator
 from common import and_arrays
 
 
+class NothingDoingExtenderStrategy:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def set_generator(self, *args, **kwargs):
+        pass
+
+    def fit(self, simple_features, y, indices):
+        self._features_count = simple_features.shape[1]
+        return self
+
+    def transform(self, simple_features):
+        return simple_features
+
+    def get_support(self, indices=False):
+        if indices:
+            return np.arange(self._features_count)
+        else:
+            return np.ones(self._features_count, dtype=np.bool)
+
+
 class ExtenderStrategy(object):
     def __init__(self,
                  max_features,

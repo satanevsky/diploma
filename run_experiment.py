@@ -4,7 +4,12 @@ from trials_keeper import TrialsFactory
 from testing import MetricsGetter, ALL_METRICS, F1
 
 
-def run_experiment(params, experiment_name, drug, max_evals=100, as_indexes=True):
+def run_experiment(
+    params,
+    experiment_name,
+    drug,
+    max_evals=100,
+    as_indexes=True):
     experiment_name_for_drug = "{}({})".format(experiment_name, drug)
     trials_factory = TrialsFactory(experiment_name_for_drug)
     inner_metrics_getter = MetricsGetter(
