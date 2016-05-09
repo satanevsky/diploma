@@ -114,8 +114,3 @@ def test_features_combimation(combination, X, y):
     for y_true, y_pred in izip(y, combination_feature):
         matr[y_true, y_pred] += 1
     return chi2_contingency(matr)[1]
-
-
-class MetricsGetter:
-    def __init__(self, metrics):
-        self._metrics = metrics
