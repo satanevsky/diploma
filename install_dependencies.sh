@@ -30,8 +30,8 @@ sudo pip install numba
 
 sudo easy_install joblib
 
-rm -f master.zip
-rm -f -r Boost.NumPy-master
+sudo rm -f master.zip
+sudo rm -f -r Boost.NumPy-master
 
 wget https://github.com/ndarray/Boost.NumPy/archive/master.zip
 unzip master.zip
@@ -41,11 +41,11 @@ cmake .
 make
 sudo make install
 cd ../
-rm master.zip
-rm -r Boost.NumPy-master
+sudo rm master.zip
+sudo rm -r Boost.NumPy-master
 
-rm -f master.zip
-rm -f -r sparsehash-master
+sudo rm -f master.zip
+sudo rm -f -r sparsehash-master
 
 wget https://github.com/sparsehash/sparsehash/archive/master.zip
 unzip master.zip
@@ -54,21 +54,30 @@ cd sparsehash-master
 ./make
 sudo make install
 cd ../
-rm master.zip
-rm -r sparsehash-master
+sudo rm master.zip
+sudo rm -r sparsehash-master
 
 wget https://github.com/hyperopt/hyperopt/archive/master.zip
 unzip master.zip
 cd hyperopt-master
 sudo python setup.py install
 cd ../
-rm master.zip
-rm -r hyperopt-master
+sudo rm master.zip
+sudo rm -r hyperopt-master
 
 wget https://github.com/danielhomola/boruta_py/archive/master.zip
 unzip master.zip
 cd boruta_py-master
 sudo python setup.py install
 cd ../
-rm master.zip
-rm -r boruta_py-master
+sudo rm master.zip
+sudo rm -r boruta_py-master
+
+wget https://github.com/numba/numba/archive/master.zip
+unzip master.zip
+cd numba-master
+sudo python setup.py install
+cd ../
+sudo rm master.zip
+sudo rm -r numba-master
+

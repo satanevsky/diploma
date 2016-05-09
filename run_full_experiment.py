@@ -14,11 +14,15 @@ def get_all_params():
     )
     return result_params
 
-if __name__ == '__main__':
+def run_full_experiment():
     params = get_all_params()
     drug = get_data_keeper().get_possible_second_level_drugs()[0]
-    run_experiment(
+    return run_experiment(
         params=params,
         experiment_name='all_params',
         drug=drug,
     )
+
+
+if __name__ == '__main__':
+    run_full_experiment()
