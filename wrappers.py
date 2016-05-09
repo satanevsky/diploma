@@ -4,9 +4,11 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectFromModel
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from scipy.sparse import csr_matrix
 from xgboost import XGBClassifier
 from joblib import Memory
+from boruta import BorutaPy
 from common import forward_out
 from generate_subsets import SubsetGenerator
 
@@ -14,7 +16,7 @@ from generate_subsets import SubsetGenerator
 mem_xgb = Memory(cachedir='cache/xgboost')
 
 
-@forward_out("logs/xgb.log")
+#@forward_out("logs/xgb.log")
 @mem_xgb.cache
 def fit_xgboost(params, X, y):
     clf = XGBClassifier(**params)
@@ -43,16 +45,15 @@ class XGBoostClassifierFeatureImportances(XGBClassifier):
     def feature_importances_(self):
         importances_dict = self.booster().get_fscore()
         print importances_dict
-        result = np.array([importances_dict.get('f{}'.format(i), 0) for i in xrange(self.__features_count)], dtype=np.float64)
+        result = np.array([importances_dict.get('f{}'.format(i), 0) for i in xrange(self._features_count)], dtype=np.float64)
         return result
 
     def fit(self, X, y):
+        self._features_count = X.shape[1]
         if X.shape[1] == 0:
             X = np.zeros((X.shape[0], 1))
         super(XGBoostClassifierFeatureImportances, self).fit(X, y)
-        self._features_count = X.shape[1]
         self.__dict__.update(fit_xgboost(self.get_params(), X, y).__dict__)
-        self.__features_count = X.shape[1]
         return self
 
     def get_support(self, indices=False):
@@ -78,7 +79,7 @@ class MatrixCleaningWrapper(BaseEstimator):
     def get_support(self, indices=False):
         if indices == False:
             raise KeyError("indices should be true")
-        support = self._inner_model.get_support(indices=True)
+        support = self.inner_model.get_support(indices=True)
         return np.array([self._features_invert_index[el] for el in support])
 
     def _set_dropped(self, X, to_drop):
@@ -98,14 +99,16 @@ class MatrixCleaningWrapper(BaseEstimator):
                   (ones_count >= (X.shape[0] / 3))].index
         self._set_dropped(X, to_drop)
         X = self._drop(X)
-        print "cleaner", X.shape
+        print "cleaner fit", X.shape
         self.inner_model.fit(X, y)
         #self.feature_importances_ = self.inner_model.feature_importances_
         return self
 
     def predict(self, X):
         X = X.copy()
+        X[X != 1] = 0
         X = self._drop(X)
+        print "cleaner predict:", X.shape
         return self.inner_model.predict(X)
 
 class SparseWrapper(BaseEstimator):
@@ -118,15 +121,16 @@ class SparseWrapper(BaseEstimator):
     def get_support(self, *args, **kwargs):
         return self.inner_model.get_support(*args, **kwargs)
 
-    @property
-    def feature_importances_(self):
-        return self.inner_model.feature_importances_
+    def set_params(self, n_estimators=None, **params):
+        super(SparseWrapper, self).set_params(**params)
+        if n_estimators is not None:
+            self.inner_model.set_params(n_estimators=n_estimators)
 
     def fit(self, X, y):
         X = self._to_sparse(X)
         #print "sparser", X.shape
         self.inner_model.fit(X, y)
-        #self.feature_importances_ = self.inner_model.feature_importances_
+        self.feature_importances_ = self.inner_model.feature_importances_
         return self
 
     def predict(self, X):
@@ -162,7 +166,7 @@ class ModelFeatureSelectionWrapper(BaseEstimator):
 
     def get_support(self, indices=False):
         feature_selector_support = self.feature_selector.get_support(indices=True)
-        inner_support = self.inner_model.get_support(indices=False)
+        inner_support = self.inner_model.get_support(indices=True)
         return get_support_for_feature_selection_wrapper(
             feature_selector_support,
             inner_support,
@@ -171,13 +175,14 @@ class ModelFeatureSelectionWrapper(BaseEstimator):
 
 
     def fit(self, X, y):
-        X = self._get_feature_selector().fit_transform(X, y)
-        self.inner_model.fit(X, y)
+        print X, X.shape
+        X = self._get_feature_selector().fit(X.copy(), y.copy()).transform(X.copy())
+        self.inner_model.fit(X.copy(), y)
         return self
 
     def predict(self, X):
-        X = self._get_feature_selector().transform(X)
-        return self.inner_model.predict(X)
+        X = self._get_feature_selector().transform(X.copy())
+        return self.inner_model.predict(X.copy())
 
 
 class ModelBasedFeatureImportanceGetter(BaseEstimator):
@@ -212,6 +217,32 @@ class AsMatrixWrapper(BaseEstimator):
             raise KeyError("indices should be true")
         return self._feature_names[self.inner_model.get_support(indices=True)]
 
+class LogisticRegressionWrapper(BaseEstimator):
+    def __init__(self, lr):
+        self.lr = lr
+
+    def fit(self, X, y):
+        self._features_count = X.shape[1]
+        if self._features_count == 0:
+            X = np.zeros((X.shape[0], 1), dtype=X.dtype)
+        self.lr.fit(X, y)
+        print "LR: ", X.shape,
+        self.feature_importances_ = self.lr.coef_.ravel()
+
+        print "LR: ", X.shape, self.feature_importances_.shape
+        return self
+
+    def predict(self, X):
+        if self._features_count == 0:
+            X = np.zeros((X.shape[0], 1), dtype=X.dtype)
+        return self.lr.predict(X)
+
+    def get_support(self, indices=False):
+        if indices:
+            return np.arange(self._features_count)
+        else:
+            return np.ones(self._features_count, dtype=np.bool)
+
 
 class BorutaWrapper(BaseEstimator):
     def __init__(self, estimator, inner_model):
@@ -220,12 +251,19 @@ class BorutaWrapper(BaseEstimator):
 
     def fit(self, X, y):
         self._feature_selector = BorutaPy(estimator=self.estimator)
-        X = self._feature_selector.fit_transform(X, y)
+        if len(X.shape) == 2 and X.shape[1] >= 1:
+            print X, y
+            X = self._feature_selector.fit_transform(X, y)
+        else:
+            X = np.ones((X.shape[0], 1), dtype=np.int64)
         self.inner_model.fit(X, y)
         return self
 
     def predict(self, X):
-        X = self._feature_selector.transform(X)
+        if len(X.shape) == 2 and X.shape[1] >= 1:
+            X = self._feature_selector.transform(X)
+        else:
+            X = np.ones((X.shape[0], 1), dtype=np.int64)
         return self.inner_model.predict(X)
 
     def get_support(self, indices=False):

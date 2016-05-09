@@ -1,5 +1,7 @@
 import sys
 
+RANDOM_STATE = 42
+
 
 def forward_out(filename):
     def decorate(func):

@@ -1,25 +1,29 @@
 from collections import defaultdict
 import traceback
-from hyperopt import hp, STATUS_OK, STATUS_FAIL, Trials
+import time
+from hyperopt import hp, STATUS_OK, STATUS_FAIL, Trials, fmin, tpe
 from hyperopt.pyll import scope
-from sklearn.linear_model import LogisticRegression
+from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest, f_classif, chi2
+from sklearn.linear_model import LogisticRegression
 from wrappers import SparseWrapper
 from wrappers import XGBoostClassifierFeatureImportances as XGB
 from wrappers import ModelFeatureSelectionWrapper
 from wrappers import BorutaWrapper
 from wrappers import SelectKBestWrapper
-from complex_features_insertion import SimplePriorityGetter
-from complex_features_insertion import BayesBasedPriorityGetter
-from complex_features_insertion import MinSimpleFeaturesIndexGetter
-from complex_features_insertion import AndBasedSimpleFeaturesIndexGetter
-from complex_features_insertion import ExtenderStrategy, \
+from wrappers import AsMatrixWrapper
+from wrappers import LogisticRegressionWrapper
+from wrappers import MatrixCleaningWrapper
+from complex_features_inserting import SimplePriorityGetter
+from complex_features_inserting import BayesBasedPriorityGetter
+from complex_features_inserting import MinSimpleFeaturesIndexGetter
+from complex_features_inserting import AndBasedSimpleFeaturesIndexGetter
+from complex_features_inserting import ExtenderStrategy, \
                                        NothingDoingExtenderStrategy
 from trials_keeper import TrialsFactory
 from frn import FeatureRelevanceNetworkWrapper
-
-RANDOM_STATE = 42
+from common import RANDOM_STATE
 
 
 def get_full_name(model_name, local_name):
@@ -27,8 +31,18 @@ def get_full_name(model_name, local_name):
 
 
 @scope.define
+def get_as_matrix_wrapper(*args, **kwargs):
+    return AsMatrixWrapper(*args, **kwargs)
+
+
+def get_as_matrix_wrapper_params(inner_model_params):
+    return scope.get_as_matrix_wrapper(inner_model_params)
+
+@scope.define
 def get_lr_model(*args, **kwargs):
-    return SparseWrapper(LogisticRegression(*args, **kwargs))
+    return SparseWrapper(LogisticRegressionWrapper(
+        lr=LogisticRegression(*args, **kwargs)),
+    )
 
 
 def get_linear_model_params(name="linear_common"):
@@ -46,36 +60,53 @@ def get_linear_model_params(name="linear_common"):
 def get_xgb_model(*args, **kwargs):
     return SparseWrapper(XGB(*args, **kwargs))
 
+#@scope.define
+#def int(val):
+#    return int(val)
+
 
 def get_xgboost_params(name="xgboost_common"):
     return scope.get_xgb_model(
-        n_estimators=hp.quniform(
-            get_full_name(name, "n_estimators"),
-            1, 200, 1,
+        n_estimators=scope.int(
+            hp.quniform(
+                get_full_name(name, "n_estimators"),
+                1, 200, 1,
+            ),
         ),
-        max_depth=hp.quniform(
-            get_full_name(name, 'max_depth'),
-            1, 13, 1,
+        max_depth=scope.int(
+            hp.quniform(
+                get_full_name(name, 'max_depth'),
+                1, 13, 1,
+            ),
         ),
-        min_child_weight=hp.quniform(
-            get_full_name(name, 'min_child_weight'),
-            1, 6, 1,
+        min_child_weight=scope.int(
+            hp.quniform(
+                get_full_name(name, 'min_child_weight'),
+                1, 6, 1,
+            ),
         ),
-        subsample=hp.uniform(
-            get_full_name(name, 'subsample'),
-            0.5, 1,
+        subsample=scope.int(
+            hp.uniform(
+                get_full_name(name, 'subsample'),
+                0.5, 1,
+            ),
         ),
         gamma=hp.uniform(
             get_full_name(name, 'gamma'),
             0.5, 1,
         ),
-        colsample_bytree=hp.uniform(
-            get_full_name(name, 'colsample_bytree'),
-            0.05, 1.0,
-        ),
         nthread=-1,
         seed=RANDOM_STATE,
     )
+
+
+@scope.define
+def get_matrix_cleaning_wrapper(*args, **kwargs):
+    return MatrixCleaningWrapper(*args, **kwargs)
+
+
+def get_matrix_cleaning_wrapper_params(inner_model_params):
+    return scope.get_matrix_cleaning_wrapper(inner_model_params)
 
 
 @scope.define
@@ -94,12 +125,13 @@ def get_model_based_feature_selection_model(*args, **kwargs):
 
 def get_model_based_feature_selector_params(
         inner_model_params,
-        name='model_based_feature_selector'
+        name='model_based_feature_selector',
         estimator=None,
     ):
     if estimator is None:
         estimator = get_feature_selector_estimator_params()
     return scope.get_model_based_feature_selection_model(
+        estimator=estimator,
         inner_model=inner_model_params,
         feature_selection_threshold_coef=hp.loguniform(get_full_name(name, "threshold"), -5, 5),
     )
@@ -107,7 +139,7 @@ def get_model_based_feature_selector_params(
 
 @scope.define
 def get_boruta_feature_selector(*args, **kwargs):
-    raise BorutaWrapper(*args, **kwargs)
+    return BorutaWrapper(*args, **kwargs)
 
 
 def get_boruta_feature_selector_params(
@@ -116,7 +148,7 @@ def get_boruta_feature_selector_params(
         estimator=None,
     ):
     if estimator is None:
-        estimator=get_model_based_feature_selector_params(
+        estimator=get_rf_model_params(
             name=get_full_name(name, 'estimator'),
         )
     return scope.get_boruta_feature_selector(
@@ -126,15 +158,22 @@ def get_boruta_feature_selector_params(
 
 
 @scope.define
+def get_k_best_wrapper(*args, **kwargs):
+    return SelectKBestWrapper(*args, **kwargs)
+
+
+@scope.define
 def get_k_best(*args, **kwargs):
-    return SelectKBestWrapper(SelectKBest(*args, **kwargs))
+    return SelectKBest(*args, **kwargs)
 
 
 def get_k_best_params(inner_model_params, name='k_best_selector'):
-    return scope.get_k_best(
+    return scope.get_k_best_wrapper(
         inner_model=inner_model_params,
-        k=hp.qloguniform(get_full_name(name, 'k'), 0, 5, 1),
-        score_func=hp.choice(get_full_name(name, 'score'), (chi2, f_classif)),
+        k_best=scope.get_k_best(
+            k=hp.qloguniform(get_full_name(name, 'k'), 0, 5, 1),
+            score_func=hp.choice(get_full_name(name, 'score'), (chi2, f_classif)),
+        ),
     )
 
 
@@ -148,18 +187,17 @@ def get_feature_selector_estimator_params(name='feature_selector_estimator'):
 
 
 def get_feature_selector_params(inner_model_params, name='feature_selector_params'):
-    model_based_estimator = get_model_based_feature_selector_params()
+    model_based_estimator = get_feature_selector_estimator_params()
     return hp.choice(
             name, (
                 get_k_best_params(
                     inner_model_params=inner_model_params,
                     name=get_full_name(name, 'k_best'),
                 ),
-                get_boruta_feature_selector_params(
-                    name=get_full_name(name, 'boruta'),
-                    estimator=model_based_estimator,
-                    inner_model_params=inner_model_params,
-                ),
+                #get_boruta_feature_selector_params(
+                #    name=get_full_name(name, 'boruta'),
+                #    inner_model_params=inner_model_params,
+                #),
                 get_model_based_feature_selector_params(
                     name=get_full_name(name, 'model_based_selector'),
                     estimator=model_based_estimator,
@@ -302,13 +340,13 @@ def get_simple_feature_adder_wrapper_params(
         name='feature_adder_common'
     ):
     generator, matrix_before_generating = get_ready_generator()
-    priority_getter = priority_getter if priority_getter is not None
-        else get_priority_getter_params(get_full_name(name. 'priority_getter'))
-    pre_filter = pre_filter if pre_filter is not None
+    priority_getter = priority_getter if priority_getter is not None \
+        else get_priority_getter_params(get_full_name(name, 'priority_getter'))
+    pre_filter = pre_filter if pre_filter is not None \
         else get_min_size_prefilter_params(get_full_name(name, 'pre_filter'))
-    features_indexes_getter = features_indexes_getter if features_indexes_getter is not None
+    features_indexes_getter = features_indexes_getter if features_indexes_getter is not None \
         else get_index_getter_params(get_full_name(name, 'indexes_getter'))
-    max_features = max_features if max_features is not None
+    max_features = max_features if max_features is not None \
         else np.qloguniform(
                 get_full_name(name, 'max_features'),
                 -1, 10, 1,
@@ -345,8 +383,11 @@ def get_objective_function(X, y, metrics_getter, callback=None):
                 'full_metrics': metrics,
                 'time_calculated': time.time(),
                 'time_spent': time.time() - start_time,
+                'model': model,
             }
         except:
+            print traceback.format_exc()
+            print repr(model)
             result = {
                 'status': STATUS_FAIL,
                 'traceback': traceback.format_exc(),
@@ -355,6 +396,7 @@ def get_objective_function(X, y, metrics_getter, callback=None):
             }
         if callback is not None:
             callback(result)
+        return result
     return objective
 
 
@@ -363,11 +405,12 @@ class HyperParameterSearcher(BaseEstimator):
         self.params = params
         self.trials_factory = trials_factory
         self.metrics_getter = metrics_getter
+        self.max_evals = max_evals
 
     def fit(self, X, y):
         trials = self.trials_factory.get_new_trials()
         try:
-            self._result_model = fmin(
+            fmin(
                 get_objective_function(
                     X,
                     y,
@@ -379,6 +422,13 @@ class HyperParameterSearcher(BaseEstimator):
                 max_evals=self.max_evals,
                 trials=trials,
             )
+            min_loss = 10.0
+            for el in trials.results:
+                if el['status'] == STATUS_OK:
+                    if el['loss'] < min_loss:
+                        self._result_model = el['model']
+                        min_loss = el['loss']
+            print self._result_model
         finally:
             self.trials_factory.flush()
         self._result_model.fit(X, y)

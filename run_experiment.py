@@ -1,7 +1,12 @@
+import cPickle as pickle
 from data_keeper import get_data_keeper
 from hyperparameter_search import HyperParameterSearcher
 from trials_keeper import TrialsFactory
 from testing import MetricsGetter, ALL_METRICS, F1
+
+
+def format_experiment_name(name):
+    return name.replace(':', '').replace('/', '')
 
 
 def run_experiment(
@@ -10,19 +15,21 @@ def run_experiment(
     drug,
     max_evals=100,
     as_indexes=True):
-    experiment_name_for_drug = "{}({})".format(experiment_name, drug)
+    experiment_name_for_drug = format_experiment_name(
+        "{}({})".format(experiment_name, drug),
+    )
     trials_factory = TrialsFactory(experiment_name_for_drug)
     inner_metrics_getter = MetricsGetter(
         metrics=ALL_METRICS,
         as_indexes=as_indexes,
         loss_func=lambda metrics: 1.0 - metrics[F1],
-        n_folds=5,
+        n_folds=2,
     )
     outer_metrics_getter = MetricsGetter(
         metrics=ALL_METRICS,
         as_indexes=as_indexes,
         loss_func=lambda metrics: 1.0 - metrics[F1],
-        n_folds=10,
+        n_folds=3,
     )
     model = HyperParameterSearcher(
         params=params,
@@ -34,4 +41,5 @@ def run_experiment(
     result_metrics, result_loss = outer_metrics_getter(model, X, y)
     with open("{}_final_results.pkl".format(experiment_name_for_drug), "wb") as f:
         pickle.dump((result_metrics, result_loss), f)
+    print result_metrics
     return result_metrics, result_loss

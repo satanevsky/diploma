@@ -36,4 +36,4 @@ class TrialsFactory(object):
             pickle.dump(ALL_TRIALS[self._experiment_name], f)
 
     def __del__(self):
-        self.refresh_trials()
+        self.flush()

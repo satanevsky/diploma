@@ -3,7 +3,7 @@ from sklearn.base import BaseEstimator
 from joblib import Memory
 from pygco import pygco
 from common import forward_out
-from numba import jit
+#from numba import jit
 
 
 mem_frn = Memory(cachedir='cache/frn')
@@ -15,7 +15,7 @@ def get_rel_feat_frn(params, X, feature_importances, importance_threshold):
     return frn.get_relevant_features(X, feature_importances, importance_threshold)
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def do_params_estimation_heavy_job(
     correlation_coefficient,
     min_correlation,

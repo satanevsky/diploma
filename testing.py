@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.cross_validation import cross_val_score, cross_val_predict, StratifiedKFold
 from sklearn.metrics import make_scorer, confusion_matrix, accuracy_score, f1_score
 from data_keeper import get_data_keeper
+from common import RANDOM_STATE
 
 
 CONFUSION_MATRIX = 'confusion_matrix'
@@ -42,6 +43,7 @@ def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds):
             random_state=RANDOM_STATE
         )
     )
+    print "y_pred", y_pred
     result = dict()
     if TRUE_VALUES in metrics:
         result[TRUE_VALUES] = y
