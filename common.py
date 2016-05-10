@@ -1,7 +1,7 @@
 import sys
 
 RANDOM_STATE = 42
-
+GENERATOR_FOLDER = "/media/vlad/01D198E892261920/vlad/vlad/diploma"
 
 def forward_out(filename):
     def decorate(func):

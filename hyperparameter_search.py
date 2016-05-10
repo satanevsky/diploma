@@ -19,11 +19,14 @@ from complex_features_inserting import SimplePriorityGetter
 from complex_features_inserting import BayesBasedPriorityGetter
 from complex_features_inserting import MinSimpleFeaturesIndexGetter
 from complex_features_inserting import AndBasedSimpleFeaturesIndexGetter
-from complex_features_inserting import ExtenderStrategy, \
-                                       NothingDoingExtenderStrategy
+from complex_features_inserting import ExtenderStrategy
+from complex_features_inserting import NothingDoingExtenderStrategy
+from complex_features_inserting import MinSizePreFilter
+from complex_features_inserting import ComplexFeaturesAdderWrapper
 from trials_keeper import TrialsFactory
 from frn import FeatureRelevanceNetworkWrapper
 from common import RANDOM_STATE
+from generate_subsets_for_common_x import get_ready_generator
 
 
 def get_full_name(model_name, local_name):
@@ -237,36 +240,22 @@ def get_min_size_prefilter(*args, **kwargs):
 
 
 def get_min_size_prefilter_params(name="min_size_prefilter_common"):
-    return scope.get_min_size_prefilter(min_size=np.quniform(0, 10, 1))
-
-
-@scope.define
-def get_and_based_index_getter(*args, **kwargs):
-    return AndBasedSimpleFeaturesIndexGetter(*args, **kwargs)
-
-
-def get_and_based_index_getter_params(name="and_based_index_getter_common"):
-    all_features = get_ready_generator()[1].as_matrix()
-    return scope.get_and_based_index_getter_params(
-        use_raw_candidate=hp.choice(
-            get_full_name(name, 'use_raw_candidate'),
-            (False, True)
+    return scope.get_min_size_prefilter(
+        min_size=hp.quniform(
+            get_full_name(name, 'min_size'),
+            0, 10, 1,
         ),
-        all_features=all_features,
     )
 
 
 @scope.define
-def get_min_simple_features_index_getter(*args, **kwargs):
-    return MinSimpleFeaturesIndexGetter(*args, **kwargs)
+def get_and_based_index_getter(*args, **kwargs):
+    kwargs['all_features'] = get_ready_generator()[1].as_matrix()
+    return AndBasedSimpleFeaturesIndexGetter(*args, **kwargs)
 
 
-def get_min_simple_features_index_getter_params(
-    name="min_simple_features_index_getter_common"
-    ):
-    generator = get_ready_generator()[0]
-    return scope.get_min_simple_features_index_getter(
-        generator=generator,
+def get_and_based_index_getter_params(name="and_based_index_getter_common"):
+    return scope.get_and_based_index_getter(
         use_raw_candidate=hp.choice(
             get_full_name(name, 'use_raw_candidate'),
             (False, True),
@@ -274,24 +263,50 @@ def get_min_simple_features_index_getter_params(
     )
 
 
+@scope.define
+def get_min_simple_features_index_getter(*args, **kwargs):
+    kwargs['generator'] = get_ready_generator()[0]
+    return MinSimpleFeaturesIndexGetter(*args, **kwargs)
+
+
+def get_min_simple_features_index_getter_params(
+    name="min_simple_features_index_getter_common"
+    ):
+    return scope.get_min_simple_features_index_getter(
+        use_raw_candidate=hp.choice(
+            get_full_name(name, 'use_raw_candidate'),
+            (False, True),
+        ),
+        max_check=1000,
+    )
+
+
 def get_index_getter_params(name='features_index_getter_common'):
     return hp.choice(
         name,
-        get_and_based_index_getter_params(),
-        get_min_simple_features_index_getter_params()
+        (
+            get_and_based_index_getter_params(),
+            get_min_simple_features_index_getter_params(),
+        ),
     )
 
 
 @scope.define
 def get_extender_strategy(*args, **kwargs):
+    kwargs['generator'] = get_ready_generator()[0]
     return ExtenderStrategy(*args, **kwargs)
+
+
+@scope.define
+def get_simple_priority_getter():
+    return SimplePriorityGetter()
 
 
 def get_priority_getter_params(name='priority_getter_common'):
     return hp.choice(
         name,
         (
-            SimplePriorityGetter(),
+            scope.get_simple_priority_getter(),
             get_bayes_based_priority_getter_params(
                 get_full_name(name, 'bayes_priority_getter'),
             ),
@@ -301,6 +316,9 @@ def get_priority_getter_params(name='priority_getter_common'):
 
 @scope.define
 def get_complex_features_adder_wrapper(*args, **kwargs):
+    matrix_before_generating = get_ready_generator()[1]
+    kwargs['matrix_before_generating'] = matrix_before_generating.as_matrix()
+    kwargs['features_names'] = list(matrix_before_generating.columns.values)
     return ComplexFeaturesAdderWrapper(*args, **kwargs)
 
 
@@ -331,15 +349,19 @@ def get_frn_params(
     )
 
 
+@scope.define
+def get_nothing_doing_extender_strategy():
+    return NothingDoingExtenderStrategy()
+
+
 def get_simple_feature_adder_wrapper_params(
-        inner_model,
+        inner_model_params,
         max_features=None,
         pre_filter=None,
         features_indexes_getter=None,
         priority_getter=None,
         name='feature_adder_common'
     ):
-    generator, matrix_before_generating = get_ready_generator()
     priority_getter = priority_getter if priority_getter is not None \
         else get_priority_getter_params(get_full_name(name, 'priority_getter'))
     pre_filter = pre_filter if pre_filter is not None \
@@ -347,7 +369,7 @@ def get_simple_feature_adder_wrapper_params(
     features_indexes_getter = features_indexes_getter if features_indexes_getter is not None \
         else get_index_getter_params(get_full_name(name, 'indexes_getter'))
     max_features = max_features if max_features is not None \
-        else np.qloguniform(
+        else hp.qloguniform(
                 get_full_name(name, 'max_features'),
                 -1, 10, 1,
             )
@@ -358,22 +380,20 @@ def get_simple_feature_adder_wrapper_params(
                 max_features=max_features,
                 priority_getter=priority_getter,
                 pre_filter=pre_filter,
-                generator=get_ready_generator()[0],
-                simple_features_indexes_getter=simple_features_index_getter,
+                simple_features_indexes_getter=features_indexes_getter,
             ),
-            NothingDoingExtenderStrategy(),
-        )
+            scope.get_nothing_doing_extender_strategy(),
+        ),
     )
     return scope.get_complex_features_adder_wrapper(
-        inner_model=inner_model,
-        matrix_before_generating=matrix_before_generating.as_matrix(),
-        features_names=list(matrix_before_generating.columns.values),
+        inner_model=inner_model_params,
         extender_strategy=extender_strategy,
     )
 
 
 def get_objective_function(X, y, metrics_getter, callback=None):
     def objective(model):
+        print "!OBJECTIVE"
         start_time = time.time()
         try:
             metrics, loss = metrics_getter(model, X, y)
@@ -386,8 +406,11 @@ def get_objective_function(X, y, metrics_getter, callback=None):
                 'model': model,
             }
         except:
-            print traceback.format_exc()
-            print repr(model)
+            with open("errors.log", "a") as f:
+                f.write(traceback.format_exc())
+                f.write("\n")
+                f.write(repr(model))
+                f.write("\n")
             result = {
                 'status': STATUS_FAIL,
                 'traceback': traceback.format_exc(),

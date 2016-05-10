@@ -196,9 +196,21 @@ class ModelBasedFeatureImportanceGetter(BaseEstimator):
         return self._inner_model.get_support(indices=indices)
 
 
-class SubsetGeneratorWrapper(SubsetGenerator):
+class SubsetGeneratorWrapper:
+    def __init__(self):
+        self.gen = SubsetGenerator()
+
+    def __getattr__(self, attr):
+        return self.gen.__getattribute__(attr)
+
     def __deepcopy__(self, memo):
         return self
+
+    def __getstate__(self):
+        return dict()
+
+    def __setstate__(self, state):
+        pass
 
 class AsMatrixWrapper(BaseEstimator):
     def __init__(self, inner_model):

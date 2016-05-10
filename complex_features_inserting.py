@@ -34,7 +34,7 @@ class ExtenderStrategy(object):
                  generator,
                  simple_features_indexes_getter,
                  max_index=150):
-        self._max_features = max_features
+        self._max_features = int(max_features)
         self._generator = generator
         self._max_features_sets_storing = 1000000
         assert self._max_features_sets_storing > 2 * max_features
@@ -208,7 +208,7 @@ class BayesBasedPriorityGetter(object):
 
     def __init__(self, max_features, reg_param=None):
         self._reg_param = reg_param
-        self._max_features = max_features
+        self._max_features = int(max_features)
 
     def estimate_parameters(self, candidates_iterator, simple_features, y, generator, indexes):
         self._generator = generator
