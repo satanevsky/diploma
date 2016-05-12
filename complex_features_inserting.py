@@ -51,7 +51,7 @@ class ExtenderStrategy(object):
         print self._generator.get_sets_count()
         for i in xrange(self._generator.get_sets_count()):
             raw_indexes = self._generator.get_set(i)
-            translated_indexes = self._get_translated_indexes(current_set)
+            translated_indexes = self._get_translated_indexes(raw_indexes)
             if not return_raw_candidate:
                 yield translated_indexes
             else:
