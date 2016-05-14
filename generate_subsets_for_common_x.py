@@ -4,6 +4,7 @@ from os.path import isfile, join
 import numpy as np
 import pandas as pd
 from data_keeper import get_data_keeper
+from generate_subsets import SubsetGenerator
 from wrappers import SubsetGeneratorWrapper
 
 RAW_X_BEFORE_SUBSET_GENERATION_PATH = "raw_X_before_subsets_generation.csv"
@@ -30,7 +31,7 @@ def make_new_generator():
     return generator, X
 
 
-def get_ready_generator(compute_if_not_found=True, folder=None):
+def get_ready_generator_inner(compute_if_not_found=True, folder=None):
     global get_generator_result
     if get_generator_result is None:
         if folder is None:
@@ -40,7 +41,7 @@ def get_ready_generator(compute_if_not_found=True, folder=None):
             raw_X_before_subsets_generation_path = join(folder, RAW_X_BEFORE_SUBSET_GENERATION_PATH)
             possible_complex_features_path = join(folder, POSSIBLE_COMPLEX_FEATURES_PATH)
         if isfile(raw_X_before_subsets_generation_path) and isfile(possible_complex_features_path):
-            generator = SubsetGeneratorWrapper()
+            generator = SubsetGenerator()
             generator.load(possible_complex_features_path)
             X = pd.read_csv(raw_X_before_subsets_generation_path, index_col=0)
             generator.set_raw_matrix(X.as_matrix().astype(np.uint8))
@@ -49,6 +50,16 @@ def get_ready_generator(compute_if_not_found=True, folder=None):
             if compute_if_not_found:
                 get_generator_result = make_new_generator()
     return get_generator_result
+
+
+class GeneratorGetter:
+    def __call__(self):
+        return get_generator_result[0]
+
+
+def get_ready_generator(*args, **kwargs):
+    generator, X = get_ready_generator_inner(*args, **kwargs)
+    return SubsetGeneratorWrapper(GeneratorGetter()), X
 
 
 __all__ = ['get_ready_generator']

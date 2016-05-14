@@ -197,20 +197,12 @@ class ModelBasedFeatureImportanceGetter(BaseEstimator):
 
 
 class SubsetGeneratorWrapper:
-    def __init__(self):
-        self.gen = SubsetGenerator()
+    def __init__(self, gen_getter):
+        self.gen_getter = gen_getter
 
     def __getattr__(self, attr):
-        return self.gen.__getattribute__(attr)
+        return self.gen_getter().__getattribute__(attr)
 
-    def __deepcopy__(self, memo):
-        return self
-
-    def __getstate__(self):
-        return dict()
-
-    def __setstate__(self, state):
-        pass
 
 class AsMatrixWrapper(BaseEstimator):
     def __init__(self, inner_model):
