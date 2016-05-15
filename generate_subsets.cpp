@@ -410,7 +410,7 @@ public:
     }
 
 
-    bn::ndarray get_probable_features_indexes(bn::ndarray objects_indexes, size_t checked_variants_limit) {
+    bn::ndarray get_probable_features_indexes(bn::ndarray objects_indexes, int checked_variants_limit) {
         vector<size_t> possible_features_indexes;
         bp::tuple shape = bp::extract<bp::tuple>(objects_indexes.attr("shape"));
         size_t size = bp::extract<size_t>(shape[0]);

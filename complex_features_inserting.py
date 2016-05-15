@@ -153,7 +153,7 @@ class MinSimpleFeaturesIndexGetter(object):
 
     def get_features_indexes(self, simple_features, candidate, raw_candidate, indexes):
         raw_indexes = raw_candidate if self._use_raw_candidate else indexes[candidate]
-        result = self._generator.get_probable_features_indexes(raw_indexes, self._max_check)
+        result = self._generator.get_probable_features_indexes(raw_indexes, int(self._max_check))
         if result[0] < 1000:
             return result
         else:
