@@ -438,7 +438,7 @@ class HyperParameterSearcher(BaseEstimator):
                     X,
                     y,
                     self.metrics_getter,
-                    callback=lambda result: self.trials_factory.flush(),
+                    callback=lambda result: self.trials_factory.flush(force=False),
                 ),
                 space=self.params,
                 algo=tpe.suggest,

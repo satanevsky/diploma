@@ -1,7 +1,7 @@
 from os.path import isfile
 import cPickle as pickle
 from hyperopt import Trials
-import cPickle as pickle
+from sklearn.externals import joblib
 
 
 ALL_TRIALS = dict()
@@ -25,12 +25,17 @@ class TrialsFactory(object):
         trials_collection.append(trials)
         return trials
 
+    def _ready(self):
+        for el in ALL_TRIALS[self._experiment_name]:
+            if len(el.trials) % 100 == 0:
+                return True
+        return False
+
     def flush(self, force=True):
-        if len(ALL_TRIALS[self._experiment_name]) == self._flushed:
-            return
-        with open("{}_{}.trials.pkl".format(self._experiment_name, self._flushed), 'wb') as f:
-            pickle.dump(ALL_TRIALS[self._experiment_name][self._flushed:], f)
-            self._flushed = len(ALL_TRIALS[self._experiment_name])
+        with open("{}_counter.txt".format(self._experiment_name), 'w') as f:
+            f.write("{}\n".format(sum([len(el.trials) for el in ALL_TRIALS[self._experiment_name]])))
+        if force or self._ready():
+            joblib.dump(ALL_TRIALS[self._experiment_name], "{}.trials.pkl".format(self._experiment_name), compress=3)
 
     def __del__(self):
         self.flush()

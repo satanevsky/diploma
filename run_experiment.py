@@ -2,7 +2,7 @@ import cPickle as pickle
 from data_keeper import get_data_keeper
 from hyperparameter_search import HyperParameterSearcher
 from trials_keeper import TrialsFactory
-from testing import MetricsGetter, ALL_METRICS, F1
+from testing import MetricsGetter, ALL_METRICS, ACCURACY
 
 
 def format_experiment_name(name):
@@ -22,14 +22,14 @@ def run_experiment(
     inner_metrics_getter = MetricsGetter(
         metrics=ALL_METRICS,
         as_indexes=as_indexes,
-        loss_func=lambda metrics: 1.0 - metrics[F1],
-        n_folds=2,
+        loss_func=lambda metrics: 1.0 - metrics[ACCURACY],
+        n_folds=3,
     )
     outer_metrics_getter = MetricsGetter(
         metrics=ALL_METRICS,
         as_indexes=as_indexes,
-        loss_func=lambda metrics: 1.0 - metrics[F1],
-        n_folds=3,
+        loss_func=lambda metrics: 1.0 - metrics[ACCURACY],
+        n_folds=10,
     )
     model = HyperParameterSearcher(
         params=params,

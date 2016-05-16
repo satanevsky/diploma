@@ -1,4 +1,5 @@
 from itertools import izip
+from copy import deepcopy
 from scipy.stats import norm, chi2_contingency
 import numpy as np
 from sklearn.cross_validation import cross_val_score, cross_val_predict, StratifiedKFold
@@ -89,6 +90,7 @@ class MetricsGetter:
         self._n_folds = n_folds
 
     def __call__(self, model, X, y):
+        model = deepcopy(model)
         metrics = get_testing_metrics(
             model,
             X,
