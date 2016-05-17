@@ -2,7 +2,7 @@ import sys
 from os import mkdir
 from os.path import isfile, isdir, join
 from collections import defaultdict
-import cPickle as pickle
+from sklearn.externals import joblib
 
 
 class ResultsDumper(object):
@@ -34,8 +34,7 @@ class ResultsDumper(object):
         while True:
             filename = join(self._get_folder(), "final_results_{}.pkl".format(counter))
             if not isfile(filename):
-                with open(filename, 'wb') as f:
-                    pickle.dump(result, f)
+                joblib.dump(result, filename, compress=3)
                 return
             counter += 1
 
@@ -43,8 +42,7 @@ class ResultsDumper(object):
         while True:
             filename = join(self._get_folder(), "{}.pkl".format(self._flush_counter))
             if not isfile(filename):
-                with open(filename, 'wb') as f:
-                    pickle.dump(self._unflushed, f)
+                joblib.dump(self._unflushed, filename, compress=3)
                 self._unflushed = list()
                 return
             self._flush_counter += 1        
