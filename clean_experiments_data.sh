@@ -1,3 +1,2 @@
-rm *.log
-rm *.pkl
 rm cache/* -r
+rm experiments_results/* -r

@@ -252,6 +252,7 @@ public:
     }
 
     void set_filtered_min_size(int min_size) {
+        std::cout << "set_filtered_min_size " << min_size << std::endl;
         sets_copy.clear();
         for (size_t i = 0; i < sets.size(); ++i) {
             if (to_index_list(sets[i]).size() >= min_size) {
@@ -259,12 +260,14 @@ public:
             }
         }
         sets.swap(sets_copy);
+        std::cout << "set_filtered_min_size done!!!" << min_size << std::endl;
     }
 
     void set_filtered_have_ones_in_positions(bn::ndarray positions) {
         bitset mask;
         bp::tuple shape = bp::extract<bp::tuple>(positions.attr("shape"));
         int size = bp::extract<int>(shape[0]);
+        std::cout << "set_filtered_have_ones_in_positions " << size << std::endl;
         for (size_t i = 0; i < size; ++i) {
             int position = bp::extract<int>(positions[i]);
             mask.set(position);
@@ -276,6 +279,7 @@ public:
             }
         }
         sets.swap(sets_copy);
+        std::cout << "set_filtered_have_ones_in_positions done!!!" << size << std::endl;
     }
 
     void set_filtered_best_beta_binomial(double alpha_regularization,
@@ -283,6 +287,9 @@ public:
                                          bn::ndarray y,
                                          bn::ndarray indexes,
                                          int max_store) {
+
+        std::cout << "set_filtered_best_beta_binomial " << max_store << std::endl;
+
 
         std::pair<bitset, bitset> y_and_indexes_mask = get_y_and_indexes_mask(y, indexes);
         bitset y_mask = y_and_indexes_mask.first;
@@ -314,6 +321,7 @@ public:
             result_queue.pop();
         }
         sets.swap(sets_copy);
+        std::cout << "set_filtered_best_beta_binomial done!!!" << max_store << std::endl;
     }
 
     bn::ndarray get_count_and_y_true_statistics(bn::ndarray y, bn::ndarray indexes) {
@@ -447,7 +455,6 @@ BOOST_PYTHON_MODULE(generate_subsets) {
         .def("load", &NSubsetGenerator::TSubsetGenerator::load)
         .def("get_sets_count", &NSubsetGenerator::TSubsetGenerator::get_sets_count)
         .def("get_set", &NSubsetGenerator::TSubsetGenerator::get_set)
-        .def("set_filtered_min_size", &NSubsetGenerator::TSubsetGenerator::set_filtered_min_size)
         .def("set_filtered_have_ones_in_positions", &NSubsetGenerator::TSubsetGenerator::set_filtered_have_ones_in_positions)
         .def("restore", &NSubsetGenerator::TSubsetGenerator::restore)
         .def("get_count_and_y_true_statistics", &NSubsetGenerator::TSubsetGenerator::get_count_and_y_true_statistics)

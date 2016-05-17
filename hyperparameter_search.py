@@ -1,6 +1,7 @@
 from collections import defaultdict
 import traceback
 import time
+import cPickle as pickle
 from hyperopt import hp, STATUS_OK, STATUS_FAIL, Trials, fmin, tpe
 from hyperopt.pyll import scope
 from sklearn.base import BaseEstimator
@@ -97,7 +98,7 @@ def get_xgboost_params(name="xgboost_common"):
             get_full_name(name, 'gamma'),
             0.5, 1,
         ),
-        nthread=-1,
+        nthread=1,
         seed=RANDOM_STATE,
     )
 
@@ -117,7 +118,7 @@ def get_rf_model(*args, **kwargs):
 
 
 def get_rf_model_params(name='rf'):
-    return scope.get_rf_model(n_estimators=100)
+    return scope.get_rf_model(n_estimators=100, n_jobs=1)
 
 
 @scope.define
@@ -415,6 +416,7 @@ def get_objective_function(X, y, metrics_getter, callback=None):
                 'traceback': traceback.format_exc(),
                 'time_calculated': time.time(),
                 'time_spent': time.time() - start_time,
+                'model': model,
             }
         if callback is not None:
             callback(result)
@@ -423,21 +425,21 @@ def get_objective_function(X, y, metrics_getter, callback=None):
 
 
 class HyperParameterSearcher(BaseEstimator):
-    def __init__(self, params, trials_factory, metrics_getter, max_evals=100):
+    def __init__(self, params, results_dumper, metrics_getter, max_evals=100):
         self.params = params
-        self.trials_factory = trials_factory
+        self.results_dumper = results_dumper
         self.metrics_getter = metrics_getter
         self.max_evals = max_evals
 
     def fit(self, X, y):
-        trials = self.trials_factory.get_new_trials()
+        trials = Trials()
         try:
             fmin(
                 get_objective_function(
                     X,
                     y,
                     self.metrics_getter,
-                    callback=lambda result: self.trials_factory.flush(force=False),
+                    callback=lambda result: self.results_dumper.add_result(result),
                 ),
                 space=self.params,
                 algo=tpe.suggest,
@@ -452,7 +454,7 @@ class HyperParameterSearcher(BaseEstimator):
                         min_loss = el['loss']
             print self._result_model
         finally:
-            self.trials_factory.flush()
+            self.results_dumper.flush()
         self._result_model.fit(X, y)
         return self
 

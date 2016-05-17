@@ -52,9 +52,19 @@ def get_ready_generator_inner(compute_if_not_found=True, folder=None):
     return get_generator_result
 
 
-class GeneratorGetter:
+class GeneratorGetter(object):
+    def __init__(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+
     def __call__(self):
-        return get_generator_result[0]
+        return get_ready_generator_inner(*self._args, **self._kwargs)
+    
+    def __getstate__(self):
+        return self.__dict__.copy()
+    
+    def __setstate__(self, state):
+        self.__dict__ = state.copy()
 
 
 def get_ready_generator(*args, **kwargs):

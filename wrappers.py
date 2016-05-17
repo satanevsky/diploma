@@ -198,10 +198,13 @@ class ModelBasedFeatureImportanceGetter(BaseEstimator):
 
 class SubsetGeneratorWrapper:
     def __init__(self, gen_getter):
-        self.gen_getter = gen_getter
+        self._gen_getter = gen_getter
 
     def __getattr__(self, attr):
-        return self.gen_getter().__getattribute__(attr)
+        return self._gen_getter().__dict__[attr]
+
+    def __getinitargs__(self):
+        return [self._gen_getter]
 
 
 class AsMatrixWrapper(BaseEstimator):
