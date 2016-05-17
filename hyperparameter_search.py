@@ -226,7 +226,7 @@ def get_bayes_based_priority_getter(*args, **kwargs):
 
 def get_bayes_based_priority_getter_params(name='bayes_based_priority_getter_common'):
     return scope.get_bayes_based_priority_getter(
-        max_features=hp.quniform(
+        max_features=hp.qloguniform(
             get_full_name(name, 'max_features'),
             0, 10, 1,
         ),
