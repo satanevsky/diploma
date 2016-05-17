@@ -157,10 +157,9 @@ class TSubsetGenerator{
 
     void generate_and_set_matrix(const matrix& matr) {
         clear_vector(sets);
-        std::ofstream fout("log");
-        fout << matr.size() << ' ' << matr[0].size() << std::endl;
+        std::cout << matr.size() << ' ' << matr[0].size() << std::endl;
         vector<bitset> simple_sets = get_simple_sets(matr);
-        fout << simple_sets.size() << std::endl;
+        std::cout << simple_sets.size() << std::endl;
         if (simple_sets.size() != matr[0].size()) throw 1;
 
         set result_set;
@@ -169,7 +168,7 @@ class TSubsetGenerator{
 
 
         for (size_t i = 0; i < simple_sets.size(); ++i) {
-            fout << i << ' ' << result_set.size() << std::endl;
+            std::cout << i << ' ' << result_set.size() << std::endl;
             update(result_set, simple_sets[i]);
         }
 

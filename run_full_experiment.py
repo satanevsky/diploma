@@ -33,7 +33,7 @@ def run_full_experiment(drug_index=0):
         experiment_name='all_params',
         drug=drug,
         as_indexes=True,
-        max_evals=10,
+        max_evals=300,
     )
 
 

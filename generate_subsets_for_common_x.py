@@ -23,7 +23,7 @@ def make_new_generator():
     X.to_csv(RAW_X_BEFORE_SUBSET_GENERATION_PATH)
     print "matrix shape after:", X.shape
     sys.stdout.flush()
-    generator = SubsetGeneratorWrapper()
+    generator = SubsetGenerator()
     generator.generate_and_set(X.as_matrix().astype(np.uint8))
     print "generating done, time from start spent:", time.time() - start_time
     generator.store(POSSIBLE_COMPLEX_FEATURES_PATH)
