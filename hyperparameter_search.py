@@ -7,7 +7,6 @@ from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest, f_classif, chi2
 from sklearn.linear_model import LogisticRegression
-from wrappers import SparseWrapper
 from wrappers import XGBoostClassifierFeatureImportances as XGB
 from wrappers import ModelFeatureSelectionWrapper
 from wrappers import BorutaWrapper
@@ -43,8 +42,8 @@ def get_as_matrix_wrapper_params(inner_model_params):
 
 @scope.define
 def get_lr_model(*args, **kwargs):
-    return SparseWrapper(LogisticRegressionWrapper(
-        lr=LogisticRegression(*args, **kwargs)),
+    return LogisticRegressionWrapper(
+        lr=LogisticRegression(*args, **kwargs)
     )
 
 
@@ -61,7 +60,7 @@ def get_linear_model_params(name="linear_common"):
 
 @scope.define
 def get_xgb_model(*args, **kwargs):
-    return SparseWrapper(XGB(*args, **kwargs))
+    return XGB(*args, **kwargs)
 
 #@scope.define
 #def int(val):
@@ -324,7 +323,7 @@ def get_complex_features_adder_wrapper(*args, **kwargs):
 
 @scope.define
 def get_frn(*args, **kwargs):
-    return FeatureRelevanceNetwork(*args, **kwargs)
+    return FeatureRelevanceNetworkWrapper(*args, **kwargs)
 
 
 def get_frn_params(
