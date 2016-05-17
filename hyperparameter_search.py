@@ -23,7 +23,6 @@ from complex_features_inserting import ExtenderStrategy
 from complex_features_inserting import NothingDoingExtenderStrategy
 from complex_features_inserting import MinSizePreFilter
 from complex_features_inserting import ComplexFeaturesAdderWrapper
-from trials_keeper import TrialsFactory
 from frn import FeatureRelevanceNetworkWrapper
 from common import RANDOM_STATE
 from generate_subsets_for_common_x import get_ready_generator
