@@ -91,7 +91,7 @@ class MetricsGetter:
         self._n_folds = n_folds
 
     def __call__(self, model, X, y):
-        model = pickle.loads(pickle.dumps(model))
+        model = deepcopy(model)
         metrics = get_testing_metrics(
             model,
             X,

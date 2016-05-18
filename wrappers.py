@@ -200,7 +200,7 @@ class SubsetGeneratorWrapper:
         self._gen_getter = gen_getter
 
     def __getattr__(self, attr):
-        return self._gen_getter().__dict__[attr]
+        return self._gen_getter().__getattribute__(attr)
 
     def __getinitargs__(self):
         return [self._gen_getter]
