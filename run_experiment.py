@@ -50,6 +50,7 @@ def run_experiment(
             as_indexes=as_indexes,
         )
         drugs = get_data_keeper().get_possible_second_level_drugs()
+        init_common()
         with ProcessPoolExecutor(max_workers=PROCESSORS_COUNT) as e:
             return list(e.map(run_experiment_for_drug, drugs))
 
