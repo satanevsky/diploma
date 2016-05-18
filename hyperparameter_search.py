@@ -390,7 +390,7 @@ def get_simple_feature_adder_wrapper_params(
     )
 
 
-def get_objective_function(X, y, metrics_getter, callback=None):
+def get_objective_function(X, y, metrics_getter, results_dumper, callback=None):
     def objective(model):
         print "!OBJECTIVE"
         start_time = time.time()
@@ -405,7 +405,7 @@ def get_objective_function(X, y, metrics_getter, callback=None):
                 'model': model,
             }
         except:
-            with open("errors.log", "a") as f:
+            with open(results_dumper.get_errors_log_filename(), "a") as f:
                 f.write(traceback.format_exc())
                 f.write("\n")
                 f.write(repr(model))
@@ -438,6 +438,7 @@ class HyperParameterSearcher(BaseEstimator):
                     X,
                     y,
                     self.metrics_getter,
+                    self.results_dumper,
                     callback=lambda result: self.results_dumper.add_result(result),
                 ),
                 space=self.params,

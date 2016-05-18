@@ -30,6 +30,10 @@ class ResultsDumper(object):
         filename = join(self._get_folder(), "execution.log")
         return open(filename, 'a')
 
+    def get_errors_log_filename(self):
+        filename = join(self._get_folder(), "errors.log")
+        return filename
+
     def dump_final_result(self, result):
         counter = 0
         while True:
