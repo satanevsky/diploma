@@ -22,7 +22,7 @@ def run_extender_selector_model(drug=ALL_SECOND_LEVEL_DRUGS):
         experiment_name='extender_selector_model',
         drug=drug,
         as_indexes=True,
-        max_evals=1000,
+        max_evals=250,
     )
 
 
