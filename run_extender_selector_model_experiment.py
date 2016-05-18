@@ -4,6 +4,7 @@ from data_keeper import get_data_keeper
 from hyperparameter_search import get_simple_feature_adder_wrapper_params,\
                                   get_feature_selector_params, \
                                   get_model_params
+from common import MAX_EVALS
 
 
 def get_all_params():
@@ -24,7 +25,7 @@ def run_extender_selector_model(drug):
         experiment_name='extender_selector_model',
         drug=drug,
         as_indexes=True,
-        max_evals=250,
+        max_evals=MAX_EVALS,
     )
 
 

@@ -337,13 +337,13 @@ def get_frn_params(
     return scope.get_frn(
         inner_model=inner_model,
         feature_importances_getter=feature_importances_getter,
-        feature_importance_priority=hp.qloguniform(
-            get_full_name(name, 'feature_importance_priority'),
-            0, 15, 1,
+        lmbda=hp.loguniform(
+            get_full_name(name, 'lmbda'),
+            -5, 15,
         ),
-        feature_selection_threshold_coef=hp.qloguniform(
+        feature_selection_threshold_coef=hp.uniform(
             get_full_name(name, 'threshold_coef'),
-            0, 10, 1,
+            0.0, 1.0,
         ),
     )
 
