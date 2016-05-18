@@ -147,9 +147,8 @@ def get_support_for_feature_selection_wrapper(
     if indices:
         return result_support_indices
     else:
-        result = np.zeros(feature_selector_indices.shape, dtype=np.bool)
-        result[result_support_indices] = True
-        return result
+        raise KyeError("indices should be true")
+
 
 class ModelFeatureSelectionWrapper(BaseEstimator):
     def __init__(self, estimator, inner_model, feature_selection_threshold_coef=3):

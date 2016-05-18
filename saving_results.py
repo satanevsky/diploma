@@ -3,6 +3,7 @@ from os import mkdir
 from os.path import isfile, isdir, join
 from collections import defaultdict
 from sklearn.externals import joblib
+from common import SAVE_RESULTS_AFTER
 
 
 class ResultsDumper(object):
@@ -22,7 +23,7 @@ class ResultsDumper(object):
         self._results_counter += 1
         with open(join(self._get_folder(), "counter.txt"), 'a') as f:
             f.write("{}\n".format(self._results_counter))
-        if len(self._unflushed) >= 50:
+        if len(self._unflushed) >= SAVE_RESULTS_AFTER:
             self.flush()
 
     def get_logs_file(self):
