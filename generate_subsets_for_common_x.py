@@ -58,7 +58,7 @@ class GeneratorGetter(object):
         self._kwargs = kwargs
 
     def __call__(self):
-        return get_ready_generator_inner(*self._args, **self._kwargs)
+        return get_ready_generator_inner(*self._args, **self._kwargs)[0]
     
     def __getstate__(self):
         return self.__dict__.copy()

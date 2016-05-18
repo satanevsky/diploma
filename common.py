@@ -3,7 +3,7 @@ import sys
 RANDOM_STATE = 42
 PROCESSORS_COUNT = 4
 GENERATOR_FOLDER = None
-SAVE_RESULTS_AFTER = 100
+SAVE_RESULTS_AFTER = 10
 
 def forward_out(filename):
     def decorate(func):
