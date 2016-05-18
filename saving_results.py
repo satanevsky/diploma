@@ -12,13 +12,23 @@ class ResultsDumper(object):
         self._unflushed = list()
         self._flush_counter = 0
         self._results_counter = 0
+        self._folder = "experiments_results"
+        self.set_subdir(self._experiment_name)
+        
+    def _get_folder(self):
+        return self._folder
+
+    def set_test_true(self, test_true):
+        self._test_true = test_true
+
+    def set_subdir(self, subdir):
+        self._folder = join(self._folder, subdir)
         if not isdir(self._get_folder()):
             mkdir(self._get_folder())
 
-    def _get_folder(self):
-        return join("experiments_results", self._experiment_name)
-
     def add_result(self, result):
+        result = result.copy()
+        result['test_true'] = self._test_true
         self._unflushed.append(result)
         self._results_counter += 1
         with open(join(self._get_folder(), "counter.txt"), 'a') as f:

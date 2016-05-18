@@ -390,12 +390,12 @@ def get_simple_feature_adder_wrapper_params(
     )
 
 
-def get_objective_function(X, y, metrics_getter, results_dumper, callback=None):
+def get_objective_function(X, y, X_test, metrics_getter, results_dumper, callback=None):
     def objective(model):
         print "!OBJECTIVE"
         start_time = time.time()
         try:
-            metrics, loss = metrics_getter(model, X, y)
+            metrics, loss = metrics_getter(model, X, y, X_test)
             result = {
                 'status': STATUS_OK,
                 'loss': loss,
@@ -430,13 +430,13 @@ class HyperParameterSearcher(BaseEstimator):
         self.metrics_getter = metrics_getter
         self.max_evals = max_evals
 
-    def fit(self, X, y):
-        trials = Trials()
+    def fit(self, X, y, X_test=None):
         try:
             fmin(
                 get_objective_function(
                     X,
                     y,
+                    X_test,
                     self.metrics_getter,
                     self.results_dumper,
                     callback=lambda result: self.results_dumper.add_result(result),
@@ -444,7 +444,6 @@ class HyperParameterSearcher(BaseEstimator):
                 space=self.params,
                 algo=tpe.suggest,
                 max_evals=self.max_evals,
-                trials=trials,
             )
             min_loss = 10.0
             for el in trials.results:

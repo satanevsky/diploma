@@ -142,7 +142,8 @@ def get_support_for_feature_selection_wrapper(
     inner_indices,
     indices,
     ):
-    result_support_indices = feature_selector_indices[inner_indices]
+    result_support_indices = feature_selector_indices[inner_indices] if sum(feature_selector_indices.shape) > 0 \
+                                else feature_selector_indices
     if indices:
         return result_support_indices
     else:

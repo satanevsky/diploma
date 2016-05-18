@@ -1,14 +1,12 @@
 import sys
-from concurrent.futures import ProcessPoolExecutor
-from common import PROCESSORS_COUNT
+from multiprocessing import Process
+from sklearn.cross_validation import StratifiedKFold
+from common import PROCESSORS_COUNT, RANDOM_STATE
 from data_keeper import get_data_keeper
 from hyperparameter_search import HyperParameterSearcher
 from saving_results import ResultsDumper
 from testing import MetricsGetter, ALL_METRICS, ACCURACY
 from generate_subsets_for_common_x import get_ready_generator
-
-
-ALL_SECOND_LEVEL_DRUGS = "all_second_level_drugs"
 
 
 def init_common():
@@ -35,6 +33,17 @@ class ExperimentForDrugCaller:
         return run_experiment(*self._args, **kwargs)
 
 
+def run_experiment_fold(model, X, y, train_index, test_index, fold_index):
+    X_train = X[train_index]
+    y_train = y[train_index]
+    X_test = X[test_index]
+    y_test = y[test_index]
+    model.results_dumper.set_subdir(str(fold_index))
+    model.results_dumper.set_test_true(y_test)
+    sys.stdout = sys.stderr = model.results_dumper.get_logs_file()
+    model.fit(X_train, y_train, X_test)
+
+
 def run_experiment(
     params,
     experiment_name,
@@ -42,23 +51,10 @@ def run_experiment(
     max_evals=100,
     as_indexes=True):
 
-    if drug == ALL_SECOND_LEVEL_DRUGS:
-        run_experiment_for_drug = ExperimentForDrugCaller(
-            params=params,
-            experiment_name=experiment_name,
-            max_evals=max_evals,
-            as_indexes=as_indexes,
-        )
-        drugs = get_data_keeper().get_possible_second_level_drugs()
-        init_common()
-        with ProcessPoolExecutor(max_workers=PROCESSORS_COUNT) as e:
-            return list(e.map(run_experiment_for_drug, drugs))
-
     experiment_name_for_drug = format_experiment_name(
         "{}({})".format(experiment_name, drug),
     )
     results_dumper = ResultsDumper(experiment_name_for_drug)
-    sys.stdout = sys.stderr = results_dumper.get_logs_file()
     loss_getter = AccuracyLossGetter()
     inner_metrics_getter = MetricsGetter(
         metrics=ALL_METRICS,
@@ -66,19 +62,29 @@ def run_experiment(
         loss_func=loss_getter,
         n_folds=5,
     )
-    outer_metrics_getter = MetricsGetter(
-        metrics=ALL_METRICS,
-        as_indexes=as_indexes,
-        loss_func=loss_getter,
-        n_folds=10,
-    )
     model = HyperParameterSearcher(
         params=params,
         results_dumper=results_dumper,
         metrics_getter=inner_metrics_getter,
         max_evals=max_evals,
     )
+
     X, y = get_data_keeper().get_train_data(drug, as_indexes=as_indexes)
-    result_metrics, result_loss = outer_metrics_getter(model, X, y)
-    results_dumper.dump_final_result((result_metrics, result_loss))
-    return result_metrics, result_loss
+
+    n_folds = 5
+
+    if len(y) < 50:
+        n_folds = 10
+
+    init_common()
+    
+    processes = list()
+    
+    for i, (train_index, test_index) in enumerate(StratifiedKFold(y, n_folds=5, shuffle=True, random_state=RANDOM_STATE)):
+        process = Process(target=run_experiment_fold, args=(model, X, y, train_index, test_index, i))
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+    

@@ -16,6 +16,7 @@ RAW_PREDICTIONS = 'raw_predictions'
 OBJECTS = 'objects'
 TRUE_VALUES = "true_values"
 F1 = 'f1_score'
+TEST_PREDICTIONS = 'test_predictions'
 
 ALL_METRICS = [
     CONFUSION_MATRIX,
@@ -25,6 +26,7 @@ ALL_METRICS = [
     OBJECTS,
     TRUE_VALUES,
     F1,
+    TEST_PREDICTIONS,
 ]
 
 
@@ -33,7 +35,7 @@ def test_model_with_drug(model, drug, metrics, as_indexes, n_folds=10):
     return get_testing_metrics(model, X, y, metrics, as_indexes, n_folds)
 
 
-def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds):
+def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds, X_test=None):
     y_pred = cross_val_predict(
         model,
         X,
@@ -46,6 +48,7 @@ def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds):
         )
     )
     print "y_pred", y_pred
+    model.fit(X, y)
     result = dict()
     if TRUE_VALUES in metrics:
         result[TRUE_VALUES] = y
@@ -56,7 +59,7 @@ def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds):
     if ACCURACY in metrics:
         result[ACCURACY] = accuracy_score(y, y_pred)
     if FEATURES in metrics:
-        result[FEATURES] = model.fit(X, y).get_support(indices=True)
+        result[FEATURES] = model.get_support(indices=True)
     if OBJECTS in metrics:
         if as_indexes:
             result[OBJECTS] = [get_data_keeper().get_object_name_by_index(index) for (index,) in X]
@@ -64,6 +67,8 @@ def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds):
             result[OBJECTS] = list(X.index)
     if F1 in metrics:
         result[F1] = f1_score(y, y_pred)
+    if TEST_PREDICTIONS in metrics:
+        result[TEST_PREDICTIONS] = X_test, model.predict(X_test)
     return result
 
 
@@ -90,7 +95,7 @@ class MetricsGetter:
     def set_folds_count(self, n_folds):
         self._n_folds = n_folds
 
-    def __call__(self, model, X, y):
+    def __call__(self, model, X, y, X_test=None):
         model = deepcopy(model)
         metrics = get_testing_metrics(
             model,
@@ -99,6 +104,7 @@ class MetricsGetter:
             self._metrics,
             self._as_indexes,
             self._n_folds,
+            X_test=X_test,
         )
         loss = self._loss_func(metrics)
         return metrics, loss
