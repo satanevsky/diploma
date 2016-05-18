@@ -1,15 +1,15 @@
 import numpy as np
 from sklearn.base import BaseEstimator
-from joblib import Memory
+#from joblib import Memory
 from pygco import pygco
 from common import forward_out
 #from numba import jit
 
 
-mem_frn = Memory(cachedir='cache/frn')
+#mem_frn = Memory(cachedir='cache/frn')
 
-@forward_out("logs/frn.log")
-@mem_frn.cache
+#@forward_out("logs/frn.log")
+#@mem_frn.cache
 def get_rel_feat_frn(params, X, feature_importances, importance_threshold):
     frn = FeatureRelevanceNetwork(**params)
     return frn.get_relevant_features(X, feature_importances, importance_threshold)

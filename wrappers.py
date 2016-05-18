@@ -7,17 +7,16 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from scipy.sparse import csr_matrix
 from xgboost import XGBClassifier
-from joblib import Memory
 from boruta import BorutaPy
 from common import forward_out
 from generate_subsets import SubsetGenerator
 
 
-mem_xgb = Memory(cachedir='cache/xgboost')
+#mem_xgb = Memory(cachedir='cache/xgboost')
 
 
 #@forward_out("logs/xgb.log")
-@mem_xgb.cache
+#@mem_xgb.cache
 def fit_xgboost(params, X, y):
     clf = XGBClassifier(**params)
     clf.fit(X, y)
