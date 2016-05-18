@@ -27,6 +27,7 @@ sudo pip install jupyter
 sudo pip install xgboost
 sudo pip install networkx
 sudo pip install numba
+sudo pip install futures
 
 sudo easy_install joblib
 

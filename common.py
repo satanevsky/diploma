@@ -1,6 +1,7 @@
 import sys
 
 RANDOM_STATE = 42
+PROCESSORS_COUNT = 4
 GENERATOR_FOLDER = None
 
 def forward_out(filename):
