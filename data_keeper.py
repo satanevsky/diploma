@@ -31,9 +31,11 @@ class DataKeeper(object):
                 u'CYCL: Cycloserine ']
 
     def get_possible_second_level_drugs(self):
-        return [u'ETHI: Ethionamide/ Prothionamide ',
+        return [u' Kanamycin ',
+                u'ETHI: Ethionamide/ Prothionamide ',
                 u'PARA: Para-aminosalicyclic acid ',
                 u'CAPR: Capreomycin ',
+                u'AMIK: Amikacin',
                 u'OFLO: Ofloxacin ']
 
     def get_possible_drugs(self):
