@@ -23,6 +23,8 @@ def fit_xgboost(params, X, y):
 class RFWrapper(RandomForestClassifier):
     def fit(self, X, y):
         self._features_count = X.shape[1]
+        if X.shape[1] == 0:
+            X = np.zeros((X.shape[0], 1), dtype=X.dtype)
         super(RFWrapper, self).fit(X, y)
         return self
 
@@ -31,6 +33,11 @@ class RFWrapper(RandomForestClassifier):
             return np.arange(self._features_count)
         else:
             return np.ones(self._features_count, dtype=np.bool)
+
+    def predict(self, X):
+        if X.shape[1] == 0:
+            X = np.zeros((X.shape[0], 1), dtype=X.dtype)
+        return super(RFWrapper, self).predict(X)
 
 
 class GridSearchCVWrapper(GridSearchCV):
