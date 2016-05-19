@@ -4,7 +4,7 @@ RANDOM_STATE = 42
 PROCESSORS_COUNT = 4
 GENERATOR_FOLDER = None
 SAVE_RESULTS_AFTER = 10
-MAX_EVALS = 5
+MAX_EVALS = 500
 
 def forward_out(filename):
     def decorate(func):
