@@ -214,7 +214,8 @@ def get_model_params(name="model_common", xgb_name=None, lr_name=None):
     lr_result_name = lr_name if lr_name is not None else get_full_name(name, 'lr')
     return hp.choice(name, (
                     get_xgboost_params(xgb_result_name),
-                    get_linear_model_params(lr_result_name)
+                    get_linear_model_params(lr_result_name),
+                    get_rf_model_params('rf'),
                 )
            )
 

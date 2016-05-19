@@ -14,8 +14,13 @@ if __name__ == "__main__":
     init_common()
     start_time = time.time()
     run_model(drug)
+    print "model done, time:", time.time() - start_time
     run_frn_model(drug)
+    print "frn_model done, time:", time.time() - start_time
     run_selector_model(drug)
+    print "selector_model done, time:", time.time() - start_time
     run_extender_frn_model(drug)
+    print "extender_frn done, time:", time.time() - start_time
     run_extender_selector_model(drug)
+    print "extender_selector done, time:", time.time() - start_time
     print "done, ", time.time() - start_time
