@@ -4,12 +4,9 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectFromModel
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
 from scipy.sparse import csr_matrix
 from xgboost import XGBClassifier
 from boruta import BorutaPy
-from common import forward_out
-from generate_subsets import SubsetGenerator
 
 
 #mem_xgb = Memory(cachedir='cache/xgboost')
@@ -21,6 +18,19 @@ def fit_xgboost(params, X, y):
     clf = XGBClassifier(**params)
     clf.fit(X, y)
     return clf
+
+
+class RFWrapper(RandomForestClassifier):
+    def fit(self, X, y):
+        self._features_count = X.shape[1]
+        super(RFWrapper, self).fit(X, y)
+        return self
+
+    def get_support(self, indices=False):
+        if indices:
+            return np.arange(self._features_count)
+        else:
+            return np.ones(self._features_count, dtype=np.bool)
 
 
 class GridSearchCVWrapper(GridSearchCV):

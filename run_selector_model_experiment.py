@@ -24,7 +24,7 @@ def run_selector_model(drug):
     params = get_all_params()
     return run_experiment(
         params=params,
-        experiment_name='extender_selector_model',
+        experiment_name='selector_model',
         drug=drug,
         as_indexes=True,
         max_evals=MAX_EVALS,

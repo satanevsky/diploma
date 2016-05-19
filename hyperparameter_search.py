@@ -5,7 +5,6 @@ import cPickle as pickle
 from hyperopt import hp, STATUS_OK, STATUS_FAIL, Trials, fmin, tpe
 from hyperopt.pyll import scope
 from sklearn.base import BaseEstimator
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest, f_classif, chi2
 from sklearn.linear_model import LogisticRegression
 from wrappers import XGBoostClassifierFeatureImportances as XGB
@@ -15,6 +14,7 @@ from wrappers import SelectKBestWrapper
 from wrappers import AsMatrixWrapper
 from wrappers import LogisticRegressionWrapper
 from wrappers import MatrixCleaningWrapper
+from wrappers import RFWrapper
 from complex_features_inserting import SimplePriorityGetter
 from complex_features_inserting import BayesBasedPriorityGetter
 from complex_features_inserting import MinSimpleFeaturesIndexGetter
@@ -113,7 +113,7 @@ def get_matrix_cleaning_wrapper_params(inner_model_params):
 
 @scope.define
 def get_rf_model(*args, **kwargs):
-    return RandomForestClassifier(*args, **kwargs)
+    return RFWrapper(*args, **kwargs)
 
 
 def get_rf_model_params(name='rf'):
