@@ -26,3 +26,12 @@ def forward_out(filename):
 def and_arrays(arrays):
     arrays_sum = arrays.sum(axis=0)
     return (arrays_sum == len(arrays)).astype(arrays.dtype)
+
+
+def format_experiment_name(name):
+    return name.replace(':', '').replace('/', '')
+
+def get_experiment_name_for_drug(experiment_name, drug):
+    return format_experiment_name(
+        "{}({})".format(experiment_name, drug),
+    )

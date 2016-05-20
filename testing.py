@@ -30,9 +30,32 @@ ALL_METRICS = [
 ]
 
 
+ALL_Y_TRUE_Y_PRED_BASED_METRICS = [
+    ACCURACY,
+    TRUE_VALUES, 
+    RAW_PREDICTIONS,
+    CONFUSION_MATRIX,
+    F1,
+]
+
+
 def test_model_with_drug(model, drug, metrics, as_indexes, n_folds=10):
     X, y = get_data_keeper().get_train_data(drug, as_indexes=as_indexes)
     return get_testing_metrics(model, X, y, metrics, as_indexes, n_folds)
+
+def get_y_true_y_pred_based_metrics(y_true, y_pred, metrics):
+    result = dict()
+    if ACCURACY in metrics:
+        result[ACCURACY] = accuracy_score(y_true, y_pred)
+    if TRUE_VALUES in metrics:
+        result[TRUE_VALUES] = y_true
+    if RAW_PREDICTIONS in metrics:
+        result[RAW_PREDICTIONS] = y_pred
+    if CONFUSION_MATRIX in metrics:
+        result[CONFUSION_MATRIX] = confusion_matrix(y_true, y_pred)
+    if F1 in metrics:
+        result[F1] = f1_score(y_true, y_pred)
+    return result
 
 
 def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds, X_test=None):
@@ -49,15 +72,7 @@ def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds, X_test=None):
     )
     print "y_pred", y_pred
     model.fit(X, y)
-    result = dict()
-    if TRUE_VALUES in metrics:
-        result[TRUE_VALUES] = y
-    if RAW_PREDICTIONS in metrics:
-        result[RAW_PREDICTIONS] = y_pred
-    if CONFUSION_MATRIX in metrics:
-        result[CONFUSION_MATRIX] = confusion_matrix(y, y_pred)
-    if ACCURACY in metrics:
-        result[ACCURACY] = accuracy_score(y, y_pred)
+    result = get_y_true_y_pred_based_metrics(y, y_pred, metrics)
     if FEATURES in metrics:
         result[FEATURES] = model.get_support(indices=True)
     if OBJECTS in metrics:
@@ -65,8 +80,6 @@ def get_testing_metrics(model, X, y, metrics, as_indexes, n_folds, X_test=None):
             result[OBJECTS] = [get_data_keeper().get_object_name_by_index(index) for (index,) in X]
         else:
             result[OBJECTS] = list(X.index)
-    if F1 in metrics:
-        result[F1] = f1_score(y, y_pred)
     if TEST_PREDICTIONS in metrics:
         result[TEST_PREDICTIONS] = X_test, model.predict(X_test)
     return result

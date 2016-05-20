@@ -7,14 +7,12 @@ from hyperparameter_search import HyperParameterSearcher
 from saving_results import ResultsDumper
 from testing import MetricsGetter, ALL_METRICS, ACCURACY
 from generate_subsets_for_common_x import get_ready_generator
+from common import get_experiment_name_for_drug
+from testing import TEST_PREDICTIONS
 
 
 def init_common():
     get_ready_generator()
-
-
-def format_experiment_name(name):
-    return name.replace(':', '').replace('/', '')
 
 
 class AccuracyLossGetter:
@@ -51,9 +49,7 @@ def run_experiment(
     max_evals=100,
     as_indexes=True):
 
-    experiment_name_for_drug = format_experiment_name(
-        "{}({})".format(experiment_name, drug),
-    )
+    experiment_name_for_drug = get_experiment_name_for_drug(experiment_name, drug)
     results_dumper = ResultsDumper(experiment_name_for_drug)
     loss_getter = AccuracyLossGetter()
     inner_metrics_getter = MetricsGetter(
