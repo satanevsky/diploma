@@ -7,6 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from scipy.sparse import csr_matrix
 from xgboost import XGBClassifier
 from boruta import BorutaPy
+from joblib import Memory
 
 
 #mem_xgb = Memory(cachedir='cache/xgboost')
@@ -267,16 +268,23 @@ class LogisticRegressionWrapper(BaseEstimator):
             return np.ones(self._features_count, dtype=np.bool)
 
 
+mem_boruta = Memory(cachedir='cache/boruta')
+
+@mem_boruta.cache
+def boruta_fit_transform(estimator, X, y):
+    feature_selector = BorutaPy(estimator)
+    X = feature_selector.fit_transform(X, y)
+    return X, feature_selector
+
+
 class BorutaWrapper(BaseEstimator):
-    def __init__(self, estimator, inner_model):
-        self.estimator = estimator
+    def __init__(self, inner_model):
+        self.estimator = RandomForestClassifier(n_estimators=100)
         self.inner_model = inner_model
 
     def fit(self, X, y):
-        self._feature_selector = BorutaPy(estimator=self.estimator)
         if len(X.shape) == 2 and X.shape[1] >= 1:
-            print X, y
-            X = self._feature_selector.fit_transform(X, y)
+            X, self._feature_selector = boruta_fit_transform(self.estimator, X, y)
         else:
             X = np.ones((X.shape[0], 1), dtype=np.int64)
         self.inner_model.fit(X, y)

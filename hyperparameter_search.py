@@ -147,14 +147,8 @@ def get_boruta_feature_selector(*args, **kwargs):
 def get_boruta_feature_selector_params(
         inner_model_params,
         name='boruta_common',
-        estimator=None,
     ):
-    if estimator is None:
-        estimator=get_rf_model_params(
-            name=get_full_name(name, 'estimator'),
-        )
     return scope.get_boruta_feature_selector(
-        estimator=estimator,
         inner_model=inner_model_params,
     )
 

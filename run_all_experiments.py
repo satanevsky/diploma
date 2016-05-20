@@ -8,6 +8,7 @@ from run_selector_model_experiment import run_selector_model
 from run_frn_model_experiment import run_frn_model
 from run_extender_selector_model_experiment import run_extender_selector_model
 from run_extender_frn_model_experiment import run_extender_frn_model
+from run_boruta_model_experiment
 
 
 if __name__ == "__main__":
@@ -19,6 +20,7 @@ if __name__ == "__main__":
     processes.append(Process(target=run_selector_model, args=(drug,)))
     processes.append(Process(target=run_extender_frn_model, args=(drug,)))
     processes.append(Process(target=run_extender_selector_model, args=(drug,)))
+    processes.append(Process(target=run_boruta_model_experiment, args=(drug,)))
     for process in processes:
         process.start()
     for process in processes:
