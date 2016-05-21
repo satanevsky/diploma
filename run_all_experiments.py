@@ -21,7 +21,7 @@ if __name__ == "__main__":
     processes.append(Process(target=run_selector_model, args=(drug,)))
     processes.append(Process(target=run_extender_frn_model, args=(drug,)))
     processes.append(Process(target=run_extender_selector_model, args=(drug,)))
-    processes.append(Process(target=run_boruta_model_experiment, args=(drug,)))
+    #processes.append(Process(target=run_boruta_model_experiment, args=(drug,)))
     processes.append(Process(target=run_extender_robust_model, args=(drug,)))
     for process in processes:
         process.start()
