@@ -6,6 +6,9 @@ from common import get_experiment_name_for_drug
 from testing import get_y_true_y_pred_based_metrics, ALL_Y_TRUE_Y_PRED_BASED_METRICS, TEST_PREDICTIONS
 
 
+DEFAULT_EXPERIMENTS_RESULTS_PATH = "experiments_results"
+
+
 def get_fold_path(results_path, fold_index):
 	return join(results_path, str(fold_index))
 
@@ -14,8 +17,12 @@ def get_dump_path(fold_path, dump_index):
 	return join(fold_path, "{}.pkl".format(dump_index))
 
 
-def load_results(experiment_name, drug, fields=['status', 'loss', 'full_metrics', 'time_calculated', 'test_true']):
-	results_path = join('experiments_results', get_experiment_name_for_drug(experiment_name, drug))
+def load_results(
+	experiment_name, 
+	drug, 
+	experiments_results_path, 
+	fields=['status', 'loss', 'full_metrics', 'time_calculated', 'test_true']):
+	results_path = join(experiments_results_path, get_experiment_name_for_drug(experiment_name, drug))
 	
 	results = list()
 	fold_index = 0
@@ -63,16 +70,17 @@ def calc_metrics(folds_result):
 	y_pred = np.array(list(chain.from_iterable(el['full_metrics'][TEST_PREDICTIONS][1] for el in folds_result)))
 	return get_y_true_y_pred_based_metrics(y_true, y_pred, ALL_Y_TRUE_Y_PRED_BASED_METRICS)
 
-def get_metrics_through_time(experiment_name, drug):
-	results = load_results(experiment_name, drug)
+
+def get_metrics_through_time(experiment_name, drug, experiments_results_path=DEFAULT_EXPERIMENTS_RESULTS_PATH):
+	results = load_results(experiment_name, drug, experiments_results_path)
 	y_true_y_pred_in_time = get_y_true_y_pred_in_time(results)
 	ans = list()
 	for time, folds_results in y_true_y_pred_in_time:
 		ans.append((time, folds_results, calc_metrics(folds_results)))
 	return ans
 
-def get_optimal_metrics_through_time(experiment_name, drug):
-	results = load_results(experiment_name, drug)
+def get_optimal_metrics_through_time(experiment_name, drug, experiments_results_path=DEFAULT_EXPERIMENTS_RESULTS_PATH):
+	results = load_results(experiment_name, drug, experiments_results_path)
 	max_fold_index = 0
 	for el in results:
 		max_fold_index = max(max_fold_index, el['fold'])
@@ -92,5 +100,5 @@ def get_optimal_metrics_through_time(experiment_name, drug):
 					folds_setted = False
 					break
 			if folds_setted:
-				result.append((el['time_calculated'], folds_values, calc_metrics(folds_values)))
+				result.append((el['time_calculated'], folds_values[:], calc_metrics(folds_values)))
 	return result
